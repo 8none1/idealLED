@@ -1,0 +1,16 @@
+{
+  "domain": "ideal_led",
+  "name": "iDeal Led",
+  "bluetooth": [
+      { "local_name": "ISP-*" }
+    ],
+  "codeowners": ["@8none1"],
+  "config_flow": true,
+  "dependencies": ["bluetooth"],
+  "documentation": "https://github.com/8none1/idealLED/",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/8none1/idealLED/issues",
+  "requirements": ["bleak-retry-connector>=1.17.1","bleak>=0.17.0"],
+  "version": "0.0.1",
+  "integration_type": "device"
+}

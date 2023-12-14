@@ -375,7 +375,8 @@ We have a standard header, in decimal is: `10, 77, 85, 76, 84` - search for that
         this.dataMap.put(bleDevice, bArr2);
         this.listenerMap.put(bleDevice, agreementListener);
         LogUtil.m104d("发送多色效果结果 :" + BleManager.getInstance().write(bleDevice, encryptData));
-    }```
+    }
+```
 
 The dec. version of a payload looks like: `10, 77, 85, 76, 84, 3, 0, 100, 80, 7, 50, 0, 0, 0, 0, 0`
 

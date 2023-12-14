@@ -1,0 +1,45 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "data": {
+                    "mac": "Bluetooth MAC address",
+                    "name": "Name"
+                },
+                "title": "Pick an iDeal LED light. Make sure light in sight for validation."
+            },
+            "validate": {
+                "data": {
+                    "retry": "Retry validate connection?",
+                    "flicker": "Did the light blink?"
+                },
+                "title": "Validate iDeal LED connection"
+            },
+            "manual": {
+                "data": {
+                    "mac": "Bluetooth MAC address",
+                    "name": "Name"
+                },
+                "title": "Enter bluetooth MAC address"
+            }
+        },
+        "error": {
+            "connect": "Unable to connect to iDeal Led light",
+        },
+        "abort": {
+            "cannot_validate": "Unable to validate iDeal Led light",
+            "cannot_connect": "Unable to connect to iDeal Led"
+        }
+    },
+    "options": {
+        "step": {
+            "user": {
+                "data": {
+                    "reset": "Reset color when led turn on",
+                    "delay": "Disconnect delay (0 equal never disconnect)"
+                }
+            }
+        }
+    },
+    "title": "iDeal Led"
+}
