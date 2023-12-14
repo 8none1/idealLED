@@ -24,7 +24,7 @@
             }
         },
         "error": {
-            "connect": "Unable to connect to iDeal Led light",
+            "connect": "Unable to connect to iDeal Led light"
         },
         "abort": {
             "cannot_validate": "Unable to validate iDeal Led light",
