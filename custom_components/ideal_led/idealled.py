@@ -269,7 +269,7 @@ class IDEALLEDInstance:
 
     @retry_bluetooth_connection_error
     # effect, reverse=0, speed=50, saturation=50, colour_data=COLOUR_DATA
-    async def set_effect(self, effect: str, new_brightness: int):
+    async def set_effect(self, effect: str, brightness: int | None = NotImplemented):
         if effect not in EFFECT_LIST:
             LOGGER.error("Effect %s not supported", effect)
             return
@@ -279,7 +279,7 @@ class IDEALLEDInstance:
         packet[5]  = effect_id
         packet[6]  = 0 # reverse
         packet[8]  = 50 # speed
-        packet[10] = 50 # saturation
+        packet[10] = 50 # saturation (brightness?)
         await self._write(packet)
         # Now we send the colour data
         await self.write_colour_data()
