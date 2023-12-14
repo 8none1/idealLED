@@ -129,9 +129,9 @@ def set_colour(r, g, b):
     # brightness ---------------------------------|-----|--------------------^ (0-100?)  NOPE - this is not brightness.
     # speed --------------------------------------|-----^
     # reverse ------------------------------------^
-    r = int(r >> 3)
-    g = int(g >> 3)
-    b = int(b >> 3)
+    # r = int(r >> 3)
+    # g = int(g >> 3)
+    # b = int(b >> 3)
     packet[9] = r
     packet[12] = r
     packet[10] = g
@@ -152,6 +152,8 @@ def set_effect(effect, reverse=0, speed=50, saturation=50, colour_data=COLOUR_DA
     # saturation (perhaps actually brightness?)-------------------------------/ |            |
     # always zero? -------------------------------------------------------------/------------|
     # NB: Effects seem to only support 7 colours max
+    if effect > 11: effect=11 # if you use an effect higher than this, you will fry your lights.  I learned this the hard way.
+
     packet = bytearray.fromhex("0A 4D 55 4C 54 08 00 64 50 07 32 00 00 00 00 00")
     packet[5]  = effect
     packet[6]  = reverse
@@ -262,10 +264,10 @@ elif len(sys.argv) > 1 and sys.argv[1] == "--connect":
                 time.sleep(1)
                 set_colour(0, 0, 255)
                 time.sleep(1)
-                for n in range(10):
+                for n in range(20):
                     print(f"Setting effect {n}")
                     set_effect(n, colour_data=build_colour_data_packet(build_rainbow_colour_list(7)))
-                    time.sleep(10)
+                    time.sleep(20)
                 # print("Clearing effect colours")
                 # set_effect(0, colour_data=build_colour_data_packet([(0, 0, 0)]))
                 print("Setting rainbow")

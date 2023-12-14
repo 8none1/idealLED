@@ -260,9 +260,9 @@ class IDEALLEDInstance:
         blue = int(rgb[2] * brightness_percent / 100)
         # RGB packet
         rgb_packet = bytearray.fromhex("0F 53 47 4C 53 00 00 64 50 1F 00 00 1F 00 00 32")
-        red   = int(red >> 3)
-        green = int(green >> 3)
-        blue  = int(blue >> 3)
+        # red   = int(red >> 3) # The app is full of shit.  You CAN send 8 bit colours to this thing.
+        # green = int(green >> 3)
+        # blue  = int(blue >> 3)
         rgb_packet[9] = red
         rgb_packet[12] = red
         rgb_packet[10] = green
@@ -280,6 +280,7 @@ class IDEALLEDInstance:
             return
         self._effect = effect
         effect_id = EFFECT_MAP.get(effect)
+        if effect_id > 11: effect = 11
         packet = bytearray.fromhex("0A 4D 55 4C 54 08 00 64 50 07 32 00 00 00 00 00")
         packet[5]  = effect_id
         packet[6]  = 0 # reverse
