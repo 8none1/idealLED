@@ -4,8 +4,10 @@ import sys
 import colorsys
 import simplepyble
 import time
+import random
 
-# Some communication with the controller is done using AES ECB
+
+# Some communication with the controller is done using AES ECB encryption
 # Key extracted from the AES library used by the Android app
 SECRET_ENCRYPTION_KEY = bytes([0x34, 0x52, 0x2A, 0x5B, 0x7A, 0x6E, 0x49, 0x2C, 0x08, 0x09, 0x0A, 0x9D, 0x8D, 0x2A, 0x23, 0xF8])
 
@@ -63,6 +65,33 @@ def build_rainbow_colour_list(num=31):
         colour_list.append((r, g, b))
     print(f"Colour list: {colour_list}")
     return colour_list
+
+def graffiti_paint(led_num, rgb_tuple, mode=2, speed=50, brightness=100):
+    # Sets a single pixel to a colour and mode
+    """
+                                        0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15
+                                        0D 44 4F 4F 44 01 00 06 00 19 FF 00 00 64 00 00
+    header -----------------------------|                  |
+    pixel number --------------------------------------------|| 
+    mode (02 solid, 01 fade, 00 flash)--------------------------||
+    speed 0-100dec ------------------------------------------------||
+    red 8 bit---------------------------------------------------------||
+    green----------------------------------------------------------------||
+    blue--------------------------------------------------------------------||
+    brightness 0-100 ----------------------------------------------------------||
+    footer------------------------------------------------------------------------||-||
+                                        0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15
+    """
+    graffiti_packet = bytearray.fromhex("0D 44 4F 4F 44 01 00 06 00 19 FF 00 00 64 00 00")
+    graffiti_packet[7] = led_num
+    graffiti_packet[8] = mode
+    graffiti_packet[9] = speed
+    r, g, b = rgb_tuple
+    graffiti_packet[10] = r
+    graffiti_packet[11] = g
+    graffiti_packet[12] = b
+    graffiti_packet[13] = brightness
+    write_packet(graffiti_packet)
 
 def decrypt_aes_ecb(ciphertext):
     cipher = AES.new(SECRET_ENCRYPTION_KEY, AES.MODE_ECB)
@@ -122,7 +151,7 @@ def set_effect(effect, reverse=0, speed=50, saturation=50, colour_data=COLOUR_DA
     # colour array size? --------------------------------------------------/  | |            |
     # saturation (perhaps actually brightness?)-------------------------------/ |            |
     # always zero? -------------------------------------------------------------/------------|
-
+    # NB: Effects seem to only support 7 colours max
     packet = bytearray.fromhex("0A 4D 55 4C 54 08 00 64 50 07 32 00 00 00 00 00")
     packet[5]  = effect
     packet[6]  = reverse
@@ -141,10 +170,10 @@ def get_version():
     write_packet(packet)
     
 def response_decode(response):
-    print(f"Response: {response.hex()}")
+    #print(f"Response: {response.hex()}")
     # The response is encrypted, so decrypt it
     response = decrypt_aes_ecb(response)
-    print(f"Decrypted: {response.hex()}")
+    print(f"Clear text response: {response.hex()}")
 
 def connect_to_device(mac_addr):
     print("Connecting to device" + mac_addr)
@@ -200,8 +229,9 @@ elif len(sys.argv) > 1 and sys.argv[1] == "--connect":
     # There are no examples of how to instantiate a peripheral object from a mac address
     # it probably can be done, but I can't work it out from the source, so for now
     # just use scan to find it by name
-    r = build_colour_data_packet(build_rainbow_colour_list(6))
-    print(f"Colour data: {r.hex()}")
+    #r = build_colour_data_packet(build_rainbow_colour_list(100))
+    r = build_rainbow_colour_list(100)
+    #print(f"Colour data: {r.hex()}")
     print("Scanning for devices")
     adapter.scan_for(2000)
     peripherals = adapter.scan_get_results()
@@ -232,12 +262,15 @@ elif len(sys.argv) > 1 and sys.argv[1] == "--connect":
                 time.sleep(1)
                 set_colour(0, 0, 255)
                 time.sleep(1)
-                # for n in range(10):
-                #     print(f"Setting effect {n}")
-                #     set_effect(n)
-                #     time.sleep(10)
+                for n in range(10):
+                    print(f"Setting effect {n}")
+                    set_effect(n, colour_data=build_colour_data_packet(build_rainbow_colour_list(7)))
+                    time.sleep(10)
+                # print("Clearing effect colours")
+                # set_effect(0, colour_data=build_colour_data_packet([(0, 0, 0)]))
                 print("Setting rainbow")
-                set_effect(5, colour_data=r)
+                for i in range(100):
+                    graffiti_paint(i, r[i], mode=random.randint(0, 2), speed=random.randint(0, 100))
                 time.sleep(40)
                 print("Turning off")
                 switch_on(False)

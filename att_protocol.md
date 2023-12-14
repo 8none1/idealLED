@@ -210,7 +210,8 @@ Run it through Google Translate and....  we have a key.  Let's assume the key is
         0x23,
         0xF8
     ]
-    ```
+```
+
 This decodes the red, green and blue packets to:
 
 `0x0F, 0x53, 0x47, 0x4C, 0x53, 0x00, 0x00, 0x64, 0x50, 0x1F, 0x00, 0x00, 0x1F, 0x00, 0x00, 0x32`
@@ -533,4 +534,159 @@ This suggest then that all the effects on this thing are the same like 10 effect
 There are 80 bytes in this list.  There are 100 LEDs. Go figure.
 
 
+
+## Graffiti
+
+Footer ----------------------------------------------------|| ||
+Blue ---------------------------------------------------|| || ||
+Green -----------------------------------------------|| || || ||
+Red ----------------------------------------------|| || || || ||
+Speed --------------------------------------------|| || || || ||
+Mode ------------------------------------------|| || || || || ||
+"Tuya light location?"-------------------||-|| || || || || || ||
+LED number 0 to 100 dec --------------|| ||-|| || || || || || ||
+Header           |------------------| || ||-|| || || || || || ||
+                 0D 44 4F 4F 44 01 00 0A 02 64 07 FF 00 64 00 00
+
+
+
+
+```
+Decrypted:       0D 44 4F 4F 44 01 00 0A 02 64 07 FF 00 64 00 00
+Decrypted:       0D 44 4F 4F 44 01 00 0B 02 64 07 FF 00 64 00 00
+Decrypted:       0D 44 4F 4F 44 01 00 0C 02 64 07 FF 00 64 00 00
+Decrypted:       0D 44 4F 4F 44 01 00 0D 02 64 07 FF 00 64 00 00
+Decrypted:       0D 44 4F 4F 44 01 00 0E 02 64 07 FF 00 64 00 00
+Decrypted:       0D 44 4F 4F 44 01 00 0F 02 64 07 FF 00 64 00 00
+Decrypted:       0D 44 4F 4F 44 01 00 10 02 64 07 FF 00 64 00 00
+Decrypted:       0D 44 4F 4F 44 01 00 11 02 64 07 FF 00 64 00 00
+Decrypted:       0D 44 4F 4F 44 01 00 12 02 64 07 FF 00 64 00 00
+Decrypted:       0D 44 4F 4F 44 01 00 13 02 64 07 FF 00 64 00 00
+Decrypted:       0D 44 4F 4F 44 01 00 14 02 64 00 04 FC 63 00 00
+Decrypted:       0D 44 4F 4F 44 01 00 15 02 64 00 04 FC 63 00 00
+Decrypted:       0D 44 4F 4F 44 01 00 16 02 64 00 04 FC 63 00 00
+Decrypted:       0D 44 4F 4F 44 01 00 17 02 64 00 04 FC 63 00 00
+Decrypted:       0D 44 4F 4F 44 01 00 18 02 64 00 04 FC 63 00 00
+Decrypted:       0D 44 4F 4F 44 01 00 19 02 64 00 04 FC 63 00 00
+Decrypted:       0D 44 4F 4F 44 01 00 1A 02 64 00 04 FC 63 00 00
+Decrypted:       0D 44 4F 4F 44 01 00 1B 02 64 00 04 FC 63 00 00
+Decrypted:       0D 44 4F 4F 44 01 00 1C 02 64 00 04 FC 63 00 00
+Decrypted:       0D 44 4F 4F 44 01 00 47 02 64 00 04 FC 63 00 00
+Decrypted:       0D 44 4F 4F 44 01 00 44 02 64 00 04 FC 63 00 00
+Decrypted:       0D 44 4F 4F 44 01 00 33 02 64 00 04 FC 63 00 00
+Decrypted:       0D 44 4F 4F 44 01 00 30 02 64 00 04 FC 63 00 00
+Decrypted:       0D 44 4F 4F 44 01 00 1F 02 64 00 04 FC 63 00 00
+Decrypted:       0D 44 4F 4F 44 01 00 63 02 64 FC 00 00 63 00 00
+```
+
+```
+        public static void graffiti(final int i, final RGB rgb, final int i2) {
+        ThreadUtils.async(new CallBack() { // from class: com.tech.smartlights.ble.BleProtocol.1
+            @Override // com.heaton.baselib.callback.CallBack
+            public void execute() {
+                byte[] hex2byte = Convert.hex2byte(Convert.integerToHexString(i2));
+                if (hex2byte.length < 2) {
+                    hex2byte = new byte[]{0, hex2byte[0]};
+                }
+                float a = rgb.getA() / 255.0f;
+                byte[] bArr = (rgb.getA() == 255 && rgb.getR() == 16 && rgb.getG() == 16 && rgb.getB() == 16) ? new byte[]
+                {13, 68, 79, 79, 68, (byte) i, hex2byte[0], hex2byte[1], (byte) rgb.getMode(), (byte) rgb.getSpeed(), (byte) (rgb.getR() * 0.0f), (byte) (rgb.getG() * 0.0f), (byte) (rgb.getB() * 0.0f), (byte) DataManager.getInstance().getDiyLight(), 0, 0} : new byte[]{13, 68, 79, 79, 68, (byte) i, hex2byte[0], hex2byte[1], (byte) rgb.getMode(), (byte) rgb.getSpeed(), (byte) (rgb.getR() * a), (byte) (rgb.getG() * a), (byte) (rgb.getB() * a), (byte) DataManager.getInstance().getDiyLight(), 0, 0};
+                LogUtil.m104d("发送涂鸦数据" + ByteUtils.BinaryToHexString(bArr));
+                LogUtil.m104d("发送涂鸦数据灯位置：--》" + i2);
+                boolean writeAll = BleManager.getInstance().writeAll(Agreement.getEncryptData(bArr), DataManager.getInstance().getProductType());
+                LogUtil.m104d("发送涂鸦数据result:" + writeAll);
+            }
+        });
+```
+
+
+in to graf mode (cleared everything)
+first px red
+last blue
+flood fill green
+flood fill red
+erase last
+erase first
+delete all
+
+```
+
+Footer ----------------------------------------------------|| ||
+Blue ---------------------------------------------------|| || ||
+Green -----------------------------------------------|| || || ||
+Red ----------------------------------------------|| || || || ||
+Speed --------------------------------------------|| || || || ||
+Mode ------------------------------------------|| || || || || ||
+"Tuya light location?"-------------------||-|| || || || || || ||
+LED number 0 to 100 dec --------------|| ||-|| || || || || || ||
+Header           |------------------| || ||-|| || || || || || ||
+                 15 54 49 4D 45 04 0A 2E 2F A5 5A A5 01 02 06 09
+                 03 56 45 00 00 00 00 00 00 00 00 00 00 00 00 00
+                 03 56 45 01 00 00 00 00 00 00 00 00 00 00 00 00
+                 0E 43 54 01 01 00 00 64 00 64 00 00 00 00 00 00
+                 04 44 45 4E 00 00 00 00 00 00 00 00 00 00 00 00 - maybe cleared?
+                 0D 44 4F 4F 44 01 00 00 02 64 FC 00 00 63 00 00 - first px red
+                 0D 44 4F 4F 44 01 00 63 02 64 00 43 FC 63 00 00 - last px blue (0x63 is last px)
+                 0D 44 4F 4F 44 00 00 64 02 64 25 FF 00 64 00 00 - flood?  yes - pixel 64 is "all"
+                 0D 44 4F 4F 44 00 00 64 02 64 25 FF 00 64 00 00
+                 0D 44 4F 4F 44 00 00 64 02 64 22 FF 00 64 00 00
+                 0D 44 4F 4F 44 00 00 64 02 64 3C FF 00 64 00 00
+                 0D 44 4F 4F 44 00 00 64 02 64 D3 FF 00 64 00 00
+                 0D 44 4F 4F 44 00 00 64 02 64 FF 65 00 64 00 00
+                 0D 44 4F 4F 44 00 00 64 02 64 FF 00 00 64 00 00
+                 0D 44 4F 4F 44 00 00 64 02 64 FF 00 00 64 00 00
+                 0D 44 4F 4F 44 00 00 64 02 64 FF 00 00 64 00 00
+                 0D 44 4F 4F 44 00 00 64 02 64 FF 00 00 64 00 00
+                 0D 44 4F 4F 44 00 00 64 02 64 FF 00 00 64 00 00
+                 0D 44 4F 4F 44 00 00 64 02 64 FF 00 00 64 00 00
+                 0D 44 4F 4F 44 00 00 64 02 64 FF 00 00 64 00 00
+                 0D 44 4F 4F 44 00 00 64 02 64 FF 00 00 64 00 00
+                 0D 44 4F 4F 44 00 00 64 02 64 FF 00 00 64 00 00
+                 0D 44 4F 4F 44 01 00 63 02 64 00 00 00 64 00 00 - erase just sets colour to black
+                 0D 44 4F 4F 44 01 00 00 02 64 00 00 00 64 00 00
+                 0D 44 4F 4F 44 00 00 64 02 64 00 00 00 64 00 00 - and setting 64 to black clears the lot. Looks like the header might have changed slightly too
+
+                 0D 44 4F 4F 44 01 00 00 02 64 FF 00 00 64 00 00
+                 0D 44 4F 4F 44 01 00 01 01 64 FF 00 00 64 00 00
+                 0D 44 4F 4F 44 01 00 02 01 32 FF 00 00 64 00 00
+                 0D 44 4F 4F 44 01 00 03 01 19 FF 00 00 64 00 00
+                 0D 44 4F 4F 44 01 00 04 00 64 FF 00 00 64 00 00
+                 0D 44 4F 4F 44 01 00 05 00 31 FF 00 00 64 00 00
+                 0D 44 4F 4F 44 01 00 06 00 19 FF 00 00 64 00 00
+header-----------|            | || || || || || ||
+?                               || || || || || ||
+0                                  || || || || ||
+pixel                                 || || || ||
+mode 02 solid, 01 fade 02 flash          || || ||
+speed 0-100dec -----------------------------|| ||  ||                                                               
+red                                            ||
+green                                             ||
+blue                                                 ||
+brightness                                              ||
+footer                                                     || ||
+
+                 0D 44 4F 4F 44 01 00 00 02 64 FF 00 00 64 00 00
+                 0D 44 4F 4F 44 01 00 00 02 64 10 FF 00 64 00 00
+                 0D 44 4F 4F 44 01 00 00 02 64 00 50 FF 64 00 00
+                 0D 44 4F 4F 44 01 00 01 01 64 FF 00 00 64 00 00
+                 0D 44 4F 4F 44 01 00 01 01 64 FF 00 00 64 00 00
+                 0D 44 4F 4F 44 01 00 02 01 64 24 FF 00 64 00 00
+                 0D 44 4F 4F 44 01 00 03 01 64 00 3C FF 64 00 00
+                 0D 44 4F 4F 44 01 00 04 01 32 FF 00 00 64 00 00
+                 0D 44 4F 4F 44 01 00 05 01 32 1F FF 00 64 00 00
+                 0D 44 4F 4F 44 01 00 06 01 32 00 3C FF 64 00 00
+                 0D 44 4F 4F 44 01 00 07 01 19 FF 00 00 64 00 00
+                 0D 44 4F 4F 44 01 00 08 01 19 22 FF 00 64 00 00
+                 0D 44 4F 4F 44 01 00 09 01 19 00 44 FF 64 00 00
+                 0D 44 4F 4F 44 01 00 13 00 64 FF 00 00 64 00 00
+                 0D 44 4F 4F 44 01 00 12 00 64 2D FF 00 64 00 00
+                 0D 44 4F 4F 44 01 00 11 00 64 00 26 FF 64 00 00
+                 0D 44 4F 4F 44 01 00 10 00 32 FF 00 00 64 00 00
+                 0D 44 4F 4F 44 01 00 0F 00 32 01 FF 00 64 00 00
+                 0D 44 4F 4F 44 01 00 0E 00 32 00 1E FF 64 00 00
+                 0D 44 4F 4F 44 01 00 0D 00 19 FF 00 00 64 00 00
+                 0D 44 4F 4F 44 01 00 0C 00 19 04 FF 00 64 00 00
+                 0D 44 4F 4F 44 01 00 0B 00 19 00 32 FF 64 00 00
+
+```
 
