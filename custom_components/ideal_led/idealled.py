@@ -183,6 +183,11 @@ class IDEALLEDInstance:
         ciphered_data = cipher.encrypt(data)
         await self._write_while_connected(ciphered_data)
 
+    async def _write_colour_data(self, data: bytearray):
+        """Send command to device and read response."""
+        await self._ensure_connected()
+        await self._write_colour_while_connected(data)
+
     async def _write_while_connected(self, data: bytearray):
         LOGGER.debug(f"Writing data to {self.name}: {data}")
         await self._client.write_gatt_char(self._write_uuid, data, False)
