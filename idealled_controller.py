@@ -129,7 +129,7 @@ def set_colour(r, g, b):
     # brightness ---------------------------------|-----|--------------------^ (0-100?)  NOPE - this is not brightness.
     # speed --------------------------------------|-----^
     # reverse ------------------------------------^
-    # r = int(r >> 3)
+    # r = int(r >> 3) # This is deliberately limited in the app to 5 bits.  But 8 bits works just fine!
     # g = int(g >> 3)
     # b = int(b >> 3)
     packet[9] = r
