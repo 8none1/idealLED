@@ -260,9 +260,9 @@ class IDEALLEDInstance:
         blue = int(rgb[2] * brightness_percent / 100)
         # RGB packet
         rgb_packet = bytearray.fromhex("0F 53 47 4C 53 00 00 64 50 1F 00 00 1F 00 00 32")
-        # red   = int(red >> 3) # The app is full of shit.  You CAN send 8 bit colours to this thing.
-        # green = int(green >> 3)
-        # blue  = int(blue >> 3)
+        red   = int(red >> 3) # You CAN send 8 bit colours to this thing, but you probably shouldn't for power reasons.  Thanks to the good folks for Hacker News for that insight.
+        green = int(green >> 3)
+        blue  = int(blue >> 3)
         rgb_packet[9] = red
         rgb_packet[12] = red
         rgb_packet[10] = green
