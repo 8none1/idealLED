@@ -171,8 +171,6 @@ class IDEALLEDInstance:
         x = 0
         for name in NAME_ARRAY:
             if self._device.name.lower().startswith(name.lower()): # TODO: match on BLE provided model instead of name
-                #self._turn_on_cmd = TURN_ON_CMD[x]
-                #self._turn_off_cmd = TURN_OFF_CMD[x]
                 return x
             x = x + 1
 
@@ -197,8 +195,7 @@ class IDEALLEDInstance:
         await self._client.write_gatt_char(self._write_colour_uuid, data, False)
     
     def _notification_handler(self, _sender: BleakGATTCharacteristic, data: bytearray) -> None:
-        # Response data is decoded here:  https://github.com/8none1/zengge_lednetwf#response-data
-        #TODO: If nothing has changed, bail out early
+        # This doesn't work.  I can't get the controller to send notifications.
         """Handle BLE notifications from the device.  Update internal state to reflect the device state."""
         LOGGER.debug("N: %s: Notification received", self.name)
         #self.local_callback()
@@ -337,12 +334,6 @@ class IDEALLEDInstance:
         try:
             await self._ensure_connected()
             self._is_on = False
-            #await asyncio.sleep(1) # TODO: Find a better way!
-            # What I'm trying to achieve here is to wait for the device to send a notification
-            # so that the status is updated correctly.  If nothing gets returned within a few
-            # seconds, assume the device is unavailable.  This might not be a safe assumption.
-            # It does mean however, that if the device is available and working, then everything
-            # in the frontend is correct.  I don't know if this is worth it though.
         except Exception as error:
             self._is_on = None # failed to connect, this should mark it as unavailable
             LOGGER.error("Error getting status: %s", error)
@@ -466,21 +457,4 @@ class IDEALLEDInstance:
         # I can't work out how to plumb a callback from here to light.py
         return
 
-    # def normalize_brightness(self, new_brightness):
-    #     "Make sure brightness is between 2 and 255 and then convert to percentage"
-    #     LOGGER.debug("Doing Normalizing brightness function")
-    #     LOGGER.debug("New brightness passed IN is %s", new_brightness)
-    #     if new_brightness is None and self._brightness is None:
-    #         new_brightness = 255
-    #     elif new_brightness is None and self._brightness > 1:
-    #         new_brightness = self._brightness
-    #     if new_brightness < 2:
-    #         new_brightness = 2
-    #     if new_brightness > 255:
-    #         new_brightness = 255
-    #     LOGGER.debug("New brightness (0-255) is %s", new_brightness)
-    #     self._brightness = new_brightness
-    #     new_percentage = int(new_brightness * 100 / 255)
-    #     LOGGER.debug("Normalized brightness percent is %s", new_percentage)
-    #     return new_percentage
     

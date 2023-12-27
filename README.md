@@ -2,9 +2,42 @@
 
 I have bricked one set of lights by sending invalid data to them.  Use this repo at your own risk.
 
-You should not write a value greater than 11, or maybe even 10, when setting a mode.
+You should be careful when sending bytes to these lights which are outside of the already discovered values.
+You can read more on this here: https://www.whizzy.org/2023-12-14-bricked-xmas/
+
+## Supported Features
+
+- On / Off
+- Set RGB colour of entire strip
+- Set DIY LED patterns (not supported in Home Assistant)
+- Set brightness
+- Set effect
+- Automatic discovery of supported devices in Home Assistant
+
+## Not supported
+
+- Discovery of current light state (no notifications from device)
+- On-chip timer functionality
 
 ## Home Assistant
 
-There is a Home Assistant custom component to let you control these lights.  You probably shouldn't use it yet.
+There is a Home Assistant custom component to let you control these lights.
 
+### Installation
+
+Add this repo to HACS as a custom repo. Click through:
+
+- HACS -> Integrations -> Top right menu -> Custom Repositories
+- Paste the Github URL to this repo in to the Repository box
+- Choose category Integration
+--Click Add
+- Restart Home Assistant
+- iDeal LED devices should start to appear in your Integrations page
+
+## Other tools
+
+There are a few other tools in this repo that might help you improve support or test your own lights.
+
+- The btsnoop directory has a few HCI log dumps if you want to look at the raw values
+- `aes_decrypt.py` was used to test the encryption implementation
+- `att_protocol.md` has notes on the protocol and the Android companion app
