@@ -1,9 +1,4 @@
-# DANGER!
-
-I have bricked one set of lights by sending invalid data to them.  Use this repo at your own risk.
-
-You should be careful when sending bytes to these lights which are outside of the already discovered values.
-You can read more on this here: https://www.whizzy.org/2023-12-14-bricked-xmas/
+# iDeal LED control
 
 ## Supported Features
 
@@ -42,3 +37,12 @@ There are a few other tools in this repo that might help you improve support or 
 - The btsnoop directory has a few HCI log dumps if you want to look at the raw values
 - `aes_decrypt.py` was used to test the encryption implementation
 - `att_protocol.md` has notes on the protocol and the Android companion app
+
+## Warning
+
+I have bricked one set of lights by sending invalid data to them while building this integration.  Use this repo at your own risk.
+You should be careful when sending bytes to these lights which are outside of the already discovered values.
+
+You can read more on this here: https://www.whizzy.org/2023-12-14-bricked-xmas/
+
+As far as I can tell this integration does not use any unsafe values by default.  If you know otherwise, please open an issue, ideally with an accompanying PR.
