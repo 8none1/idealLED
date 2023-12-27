@@ -30,7 +30,7 @@ Add this repo to HACS as a custom repo. Click through:
 - HACS -> Integrations -> Top right menu -> Custom Repositories
 - Paste the Github URL to this repo in to the Repository box
 - Choose category Integration
---Click Add
+- Click Add
 - Restart Home Assistant
 - iDeal LED devices should start to appear in your Integrations page
 
