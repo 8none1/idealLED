@@ -21,8 +21,6 @@ import traceback
 import logging
 import colorsys
 
-# Add effects information in a separate file because there is a LOT of boilerplate.
-
 LOGGER = logging.getLogger(__name__)
 
 EFFECT_01 = "Effect 01"
@@ -248,9 +246,9 @@ class IDEALLEDInstance:
         if brightness is None:
             if self._brightness is None:
                 self._brightness = 255
-            else:
-                brightness = self._brightness
-        brightness_percent = int(brightness * 100 / 255)
+        else:
+            self._brightness = brightness
+        brightness_percent = int(self._brightness * 100 / 255)
         # Now adjust the RBG values to match the brightness
         red = int(rgb[0] * brightness_percent / 100)
         green = int(rgb[1] * brightness_percent / 100)
