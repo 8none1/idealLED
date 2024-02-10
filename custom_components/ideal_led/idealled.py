@@ -21,6 +21,8 @@ import traceback
 import logging
 import colorsys
 
+# Add effects information in a separate file because there is a LOT of boilerplate.
+
 LOGGER = logging.getLogger(__name__)
 
 EFFECT_01 = "Effect 01"
@@ -62,6 +64,10 @@ BLEAK_BACKOFF_TIME = 0.25
 RETRY_BACKOFF_EXCEPTIONS = (BleakDBusError)
 
 WrapFuncType = TypeVar("WrapFuncType", bound=Callable[..., Any])
+
+def bytearray_to_hex_format(byte_array):
+    hex_strings = ["0x{:02x}".format(byte) for byte in byte_array]
+    return hex_strings
 
 def retry_bluetooth_connection_error(func: WrapFuncType) -> WrapFuncType:
     async def _async_wrap_retry_bluetooth_connection_error(
@@ -145,7 +151,7 @@ class IDEALLEDInstance:
         self._cached_services: BleakGATTServiceCollection | None = None
         self._expected_disconnect = False
         self._is_on = None
-        self._rgb_color = None
+        self._rgb_color = (255,0,0)
         self._brightness = 255
         self._effect = None
         self._effect_speed = 0x64
@@ -195,7 +201,9 @@ class IDEALLEDInstance:
     def _notification_handler(self, _sender: BleakGATTCharacteristic, data: bytearray) -> None:
         # This doesn't work.  I can't get the controller to send notifications.
         """Handle BLE notifications from the device.  Update internal state to reflect the device state."""
-        LOGGER.debug("N: %s: Notification received", self.name)
+        cipher = AES.new(SECRET_ENCRYPTION_KEY, AES.MODE_ECB)
+        clear_data = cipher.decrypt(data)
+        LOGGER.debug(f"BLE Notification: {self.name}: {bytearray_to_hex_format(clear_data)}")
         #self.local_callback()
 
 
@@ -239,16 +247,30 @@ class IDEALLEDInstance:
     def color_mode(self):
         return self._color_mode
 
+    async def set_brightness(self, brightness: int):
+        LOGGER.info("Brightness only: "+str(brightness))
+        if brightness == self._brightness:
+          return
+        else:
+          self._brightness = brightness
+          if self._effect is not None:
+            await self.set_effect(self._effect, self._brightness)
+          else:
+            await self.set_rgb_color(self._rgb_color, self._brightness)
+          
     @retry_bluetooth_connection_error
     async def set_rgb_color(self, rgb: Tuple[int, int, int], brightness: int | None = None):
-        # TODO: Add support for brightness
+        if None in rgb:
+          rgb = self._rgb_color
         self._rgb_color = rgb
+        self._effect = None
+        self._color_mode = ColorMode.RGB
         if brightness is None:
             if self._brightness is None:
                 self._brightness = 255
-        else:
-            self._brightness = brightness
-        brightness_percent = int(self._brightness * 100 / 255)
+            else:
+                brightness = self._brightness
+        brightness_percent = int(brightness * 100 / 255)
         # Now adjust the RBG values to match the brightness
         red = int(rgb[0] * brightness_percent / 100)
         green = int(rgb[1] * brightness_percent / 100)
@@ -264,7 +286,7 @@ class IDEALLEDInstance:
         rgb_packet[13] = green
         rgb_packet[11] = blue
         rgb_packet[14] = blue
-        await self._write(rgb_packet)    
+        await self._write(rgb_packet)
 
 
     @retry_bluetooth_connection_error
@@ -274,13 +296,15 @@ class IDEALLEDInstance:
             LOGGER.error("Effect %s not supported", effect)
             return
         self._effect = effect
+        self._color_mode = None
         effect_id = EFFECT_MAP.get(effect)
         if effect_id > 11: effect = 11
+        brightness_pct = int(brightness * 100 / 255)
         packet = bytearray.fromhex("0A 4D 55 4C 54 08 00 64 50 07 32 00 00 00 00 00")
         packet[5]  = effect_id
         packet[6]  = 0 # reverse
         packet[8]  = 50 # speed
-        packet[10] = 50 # saturation (brightness?)
+        packet[10] = 100 # brightness_pct # 50 # saturation (brightness?)
         await self._write(packet)
         # Now we send the colour data
         await self.write_colour_data()
@@ -291,11 +315,12 @@ class IDEALLEDInstance:
         # In the app you can edit this yourself, but HA doesn't have the UI for such a thing
         # so for now I'm just going to hardcode it to a rainbow pattern.  You could change this to
         # whatever you want, but for an effect the maximum length is 7 colours.
+        brightness_pct = int(self._brightness * 100 / 255)
         colour_list = []
         colour_divisions = int(360 / 7)
         for i in range(7):
             h = i * colour_divisions
-            r, g, b = colorsys.hsv_to_rgb(h / 360, 1, 1)
+            r, g, b = colorsys.hsv_to_rgb(h / 360, 1, brightness_pct / 100.0)
             r = int(r * 255)
             g = int(g * 255)
             b = int(b * 255)
@@ -455,4 +480,3 @@ class IDEALLEDInstance:
         # I can't work out how to plumb a callback from here to light.py
         return
 
-    

@@ -107,23 +107,25 @@ class IDEALLEDLight(LightEntity):
         return False
 
     async def async_turn_on(self, **kwargs: Any) -> None:
+        LOGGER.info("Turn on called.  kwargs: "+str(kwargs))
         if not self.is_on:
             await self._instance.turn_on()
                 
-        if ATTR_BRIGHTNESS in kwargs and kwargs[ATTR_BRIGHTNESS] != self.brightness:
-            self._brightness = kwargs[ATTR_BRIGHTNESS]
-            #await self._instance.set_brightness_local(kwargs[ATTR_BRIGHTNESS])
+        if ATTR_BRIGHTNESS in kwargs and len(kwargs) == 1:
+            # Only brightness changed
+            await self._instance.set_brightness(kwargs[ATTR_BRIGHTNESS])
                
         if ATTR_RGB_COLOR in kwargs:
             if kwargs[ATTR_RGB_COLOR] != self.rgb_color:
                 self._effect = None
-                bri = kwargs[ATTR_BRIGHTNESS] if ATTR_BRIGHTNESS in kwargs else None
+                bri = kwargs[ATTR_BRIGHTNESS] if ATTR_BRIGHTNESS in kwargs else self._instance._brightness
                 await self._instance.set_rgb_color(kwargs[ATTR_RGB_COLOR], bri)
         
         if ATTR_EFFECT in kwargs:
             if kwargs[ATTR_EFFECT] != self.effect:
                 self._effect = kwargs[ATTR_EFFECT]
-                await self._instance.set_effect(kwargs[ATTR_EFFECT])
+                bri = kwargs[ATTR_BRIGHTNESS] if ATTR_BRIGHTNESS in kwargs else self._instance._brightness
+                await self._instance.set_effect(kwargs[ATTR_EFFECT], bri)
         self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
