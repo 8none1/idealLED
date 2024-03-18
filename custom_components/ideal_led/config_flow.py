@@ -88,10 +88,18 @@ class BJLEDFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the user step to pick discovered device."""
         if user_input is not None:
             self.mac = user_input[CONF_MAC]
-            self.name = self.context["title_placeholders"]["name"]
+            if "title_placeholders" in self.context:
+                self.name = self.context["title_placeholders"]["name"]
+            if 'source' in self.context.keys() and self.context['source'] == "user":
+                LOGGER.debug(f"User context.  discovered devices: {self._discovered_devices}")
+                for each in self._discovered_devices:
+                    LOGGER.debug(f"Address: {each.address()}")
+                    if each.address() == self.mac:
+                        self.name = each.get_device_name()
+            if self.name is None: self.name = self.mac
             await self.async_set_unique_id(self.mac, raise_on_progress=False)
             self._abort_if_unique_id_configured()
-            return await self.async_step_validate()
+            return await self.async_step_validate()            
 
         current_addresses = self._async_current_ids()
         for discovery_info in async_discovered_service_info(self.hass):
