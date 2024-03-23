@@ -1,5 +1,7 @@
 # iDeal LED control
 
+![image](https://github.com/8none1/idealLED/assets/6552931/c5fcd8fc-440a-48dd-abe4-d6fdd2e4a422)
+
 ## Supported Features
 
 - On / Off
