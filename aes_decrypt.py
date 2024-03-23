@@ -26,7 +26,8 @@ def main(hex_string):
 
     print(f"Original string: {ori_hex_string}")
     print(f"Decrypted:       {clear_hex_string}")
-    print(f"Decminal:        {' '.join(f'{byte:02d}' for byte in decrypted_text)}")
+    print(f"Decimal:        {' '.join(f'{byte:02d}' for byte in decrypted_text)}")
+    print(f"ASCII:          {decrypted_text.decode('utf-8')}")
     #print(f"Re-encrypted:    {reecrypted_hex_string}")
     #print()
 

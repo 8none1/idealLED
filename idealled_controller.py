@@ -93,6 +93,30 @@ def graffiti_paint(led_num, rgb_tuple, mode=2, speed=50, brightness=100):
     graffiti_packet[13] = brightness
     write_packet(graffiti_packet)
 
+def bulk_paint():
+    command_packet = bytearray.fromhex("04 44 4F 4F 54 01 00 00 00 00 00 00 00 00 00 00")
+    write_packet(command_packet)
+    # Now we send the colour data
+    colour_data = build_rainbow_colour_list(20) # 20 pixels in length to start with
+    payload = []
+    payload.append(0) # Needs to be overwritten with the length of the colour data
+    payload.append(0) # Might be second byte of length?  Max length of my lights is 100, so I don't know
+    for each in colour_data:
+        r, g, b = each
+        payload.append(0) # Start of data
+        payload.append(1) # Number of pixels to be this colour
+        payload.append(r)
+        payload.append(g)
+        payload.append(b)
+        payload.append(2) # Solid = 2, Fade = 1, Flash = 0
+        payload.append(50) # Speed
+    payload[0] = len(payload) - 1
+    payload = bytearray(payload)
+    print(f"Bulk Payload: {' '.join(f'{byte:02X}' for byte in payload)}")
+    write_colour_data(bytearray(payload))
+    write_packet(bytearray.fromhex("06 44 4F 4F 54 43 50 00 00 00 00 00 00 00 00 00"))
+    write_packet(bytearray.fromhex("08 44 54 41 52 54 43 59 01 00 00 00 00 00 00 00"))
+
 def decrypt_aes_ecb(ciphertext):
     cipher = AES.new(SECRET_ENCRYPTION_KEY, AES.MODE_ECB)
     plaintext = cipher.decrypt(ciphertext)
@@ -129,9 +153,9 @@ def set_colour(r, g, b):
     # brightness ---------------------------------|-----|--------------------^ (0-100?)  NOPE - this is not brightness.
     # speed --------------------------------------|-----^
     # reverse ------------------------------------^
-    # r = int(r >> 3) # This is deliberately limited in the app to 5 bits.  But 8 bits works just fine!
-    # g = int(g >> 3)
-    # b = int(b >> 3)
+    r = int(r >> 3) # This is deliberately limited in the app to 5 bits.  This is probably to save power and avoid blowing the regulator on the controller.  Which happens. :(
+    g = int(g >> 3)
+    b = int(b >> 3)
     packet[9] = r
     packet[12] = r
     packet[10] = g
@@ -257,23 +281,26 @@ elif len(sys.argv) > 1 and sys.argv[1] == "--connect":
                 print("Turning on")
                 switch_on(True)
                 time.sleep(1)
-                print("Setting colour")
-                set_colour(255, 0, 0)
-                time.sleep(1)
-                set_colour(0, 255, 0)
-                time.sleep(1)
-                set_colour(0, 0, 255)
-                time.sleep(1)
-                for n in range(20):
-                    print(f"Setting effect {n}")
-                    set_effect(n, colour_data=build_colour_data_packet(build_rainbow_colour_list(7)))
-                    time.sleep(20)
-                # print("Clearing effect colours")
-                # set_effect(0, colour_data=build_colour_data_packet([(0, 0, 0)]))
-                print("Setting rainbow")
-                for i in range(100):
-                    graffiti_paint(i, r[i], mode=random.randint(0, 2), speed=random.randint(0, 100))
-                time.sleep(40)
+                # print("Setting colour")
+                # set_colour(255, 0, 0)
+                # time.sleep(1)
+                # set_colour(0, 255, 0)
+                # time.sleep(1)
+                # set_colour(0, 0, 255)
+                # time.sleep(1)
+                # for n in range(2):
+                #     print(f"Setting effect {n}")
+                #     set_effect(n, colour_data=build_colour_data_packet(build_rainbow_colour_list(7)))
+                #     time.sleep(7)
+                print("Clearing effect colours")
+                set_effect(0, colour_data=build_colour_data_packet([(0, 0, 0)]))
+                # print("Setting rainbow")
+                # for i in range(100):
+                #     graffiti_paint(i, r[i], mode=random.randint(0, 2), speed=random.randint(0, 100), brightness=50)
+                # time.sleep(10)
+                print("Bulk painting")
+                bulk_paint()
+                time.sleep(10)
                 print("Turning off")
                 switch_on(False)
                 #print("Pausing for 5 seconds")

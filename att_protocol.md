@@ -691,3 +691,31 @@ footer                                                     || ||
 
 ```
 
+## Collections
+
+You can define a custom pattern in the App and then save it as a collection, you can then quickly apply that collection in bulk to the strip.
+
+How does this work?
+
+btatt.value == 24 00 00 01 ff 00 00 02 64 00 01 53 ff 00 02 64 00 01 00 68 ff 02 64 00 5e 00 00 00 02 64 00 03 ff 00 00 02…
+btatt.value == 1d 00 00 03 ff 00 00 02 64 00 03 0f ff 00 02 64 00 03 00 4f ff 02 64 00 5b 00 00 00 02 64 00 00 00 00 00 00…
+btatt.value == 1d 00 00 03 ff 00 00 02 64 00 03 0f ff 00 02 64 00 03 00 4f ff 02 64 00 5b 00 00 00 02 64 00 00 00 00 00 00…
+
+btatt.value == 16 00 00 0a ff 00 00 02 64 00 0a ff ff ff 02 64 00 50 00 00 00 02 64 00 00 00 00 00 00 00 00 00 00 00 00 00…
+
+
+```text
+|------| ---------------- ?
+         || ------------- the next 0a (10) pixels are
+         || ||-||-|| ---- RGB
+         || || || || ||-- ?
+         || || || || || ||- ? (100, could be brightness)
+         || || || || || || || - ?
+         || || || || || || || || - the next 0a (10) pixels are
+         || || || || || || || || ||-||-||---- white
+         || || || || || || || || || || || || || ||
+                                                   || - 80 decimal
+                                                      |------| - off
+16 00 00 0a ff 00 00 02 64 00 0a ff ff ff 02 64 00 50 00 00 00 02 64 00 00 00 00 00 00 00 00 00 00 00 00 00…
+```
+
