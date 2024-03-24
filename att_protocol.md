@@ -230,7 +230,7 @@ Now let's search the Android app for the header part of those decoded bytes: `0x
 
 Bingo!
 
-```
+```text
 byte[] bArr = {15, 83, 71, 76, 83, (byte) lightsColor.getModelIndex(), (byte) (1 ^ z), 100, (byte) lightsColor.getSpeed(), red, green, blue, red2, green2, blue2, (byte) lightsColor.getSaturation()};
 ```
 
@@ -250,7 +250,7 @@ I'm going to start with the packets that are sent at the start when opening the 
 
 This is a clear text start up procedure from the Android device to the lights:
 
-```
+```text
 0x15, 0x54, 0x49, 0x4D, 0x45, 0x02, 0x0D, 0x2D, 0x0A, 0xA5, 0x5A, 0xA5, 0x01, 0x02, 0x06, 0x09 - gets time
 0x03, 0x56, 0x45, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 - get version
 0x03, 0x56, 0x45, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 - get version as well?
@@ -709,19 +709,157 @@ btatt.value == 16 00 00 0a ff 00 00 02 64 00 0a ff ff ff 02 64 00 50 00 00 00 02
 
 
 ```text
-|------| ---------------- ?
-         || ------------- the next 0a (10) pixels are
-         || ||-||-|| ---- RGB
-         || || || || ||-- ?
-         || || || || || ||- ? (100, could be brightness)
-         || || || || || || || - ?
-         || || || || || || || || - the next 0a (10) pixels are
-         || || || || || || || || ||-||-||---- white
-         || || || || || || || || || || || || || ||
-                                                   || - 80 decimal
-                                                      |------| - off
-16 00 00 0a ff 00 00 02 64 00 0a ff ff ff 02 64 00 50 00 00 00 02 64 00 00 00 00 00 00 00 00 00 00 00 00 00…
+|-- length of rest of this message
+|  |-- sequence number (if there are multiple messages needed to send the entire thing) 
+|  |  |------------------|- 00 (header)
+|  |  |                  |- 0a (pixel count)
+|  |  |                  |- ff (red)
+|  |  |                  |- 00 (green)
+|  |  |                  |- 00 (blue)
+|  |  |                  |- 02 (mode: 0, 1 2)
+|  |  |                  |- 64 (speed: 0-100)
+16 00 00 0a ff 00 00 02 64 00 0a ff ff ff 02 64 00 50 00 00 00 02 64 00 00 00 00 00 00 00 00 00 00 00 00 00
+                           |------------------| - next instruction
+                                                |------------------| - next instruction
 ```
+
+### What happens when we send a very long collection?
+
+To try and work out what's going on here I'm going to send a short collection, and then send a long collection which should overflow the single message size.
+This is made more difficult by Wireshark, or the nRF sniffer, truncating the data packets but I think we can still work with it.
+
+#### Encrypted
+
+```text
+d76dc77f84fdfb9bb32b2ea2b51dbbdd
+1600000aff00000264000affffff02640050000000026400000000000000000000000000
+49ca6210248aac8b1c1fc7fc55dd3f94
+e761c13e901167bd39bf66db76b9eb6f
+e761c13e901167bd39bf66db76b9eb6f
+eaae95bc4086f9f616d0d3bf057b84e7
+630000018000000264000196fdff0264000380000002640001003bff0264000580000002
+6301000280000002640001d100ff0264000180000002640001d100ff0264000380000002
+630200028000000264000100ffc302640001d100ff0264000580000002640001d100ff02
+24030001d100ff0264000280000002640001d100ff02640006800000026400024bff0002
+49ca6210248aac8b1c1fc7fc55dd3f94
+e761c13e901167bd39bf66db76b9eb6f
+```
+
+### Decrypted
+
+```text
+Original string: D7 6D C7 7F 84 FD FB 9B B3 2B 2E A2 B5 1D BB DD
+Decrypted 1:     04 44 4F 4F 54 01 00 00 00 00 00 00 00 00 00 00
+Decimal:         04 68 79 79 84 01 00 00 00 00 00 00 00 00 00 00
+ASCII:           DOOT
+
+16 00 00 0A FF 00 00 02 64 00 0A FF FF FF 02 64 00 50 00 00 00 02 64 00 00 00 00 00 00 00 00 00 00 00 00 00
+
+Original string: 49 CA 62 10 24 8A AC 8B 1C 1F C7 FC 55 DD 3F 94
+Decrypted 2:     06 44 4F 4F 54 43 50 00 00 00 00 00 00 00 00 00
+Decimal:         06 68 79 79 84 67 80 00 00 00 00 00 00 00 00 00
+ASCII:           DOOTCP
+
+Original string: E7 61 C1 3E 90 11 67 BD 39 BF 66 DB 76 B9 EB 6F
+Decrypted 3:     08 44 54 41 52 54 43 59 01 00 00 00 00 00 00 00
+Decimal:         08 68 84 65 82 84 67 89 01 00 00 00 00 00 00 00
+ASCII:           DTARTCY
+
+Original string: E7 61 C1 3E 90 11 67 BD 39 BF 66 DB 76 B9 EB 6F
+Decrypted 4:     08 44 54 41 52 54 43 59 01 00 00 00 00 00 00 00
+Decimal:         08 68 84 65 82 84 67 89 01 00 00 00 00 00 00 00
+ASCII:           DTARTCY
+
+Original string: EA AE 95 BC 40 86 F9 F6 16 D0 D3 BF 05 7B 84 E7
+Decrypted 5:     04 44 4F 4F 54 04 00 00 00 00 00 00 00 00 00 00
+Decimal:         04 68 79 79 84 04 00 00 00 00 00 00 00 00 00 00
+ASCII:           DOOT
+
+63 00 00 01 80 00 00 02 64 00 01 96 FD FF 02 64 00 03 80 00 00 02 64 00 01 00 3B FF 02 64 00 05 80 00 00 02
+63 01 00 02 80 00 00 02 64 00 01 D1 00 FF 02 64 00 01 80 00 00 02 64 00 01 D1 00 FF 02 64 00 03 80 00 00 02
+63 02 00 02 80 00 00 02 64 00 01 00 FF C3 02 64 00 01 D1 00 FF 02 64 00 05 80 00 00 02 64 00 01 D1 00 FF 02
+24 03 00 01 D1 00 FF 02 64 00 02 80 00 00 02 64 00 01 D1 00 FF 02 64 00 06 80 00 00 02 64 00 02 4B FF 00 02
+
+Original string: 49 CA 62 10 24 8A AC 8B 1C 1F C7 FC 55 DD 3F 94
+Decrypted 6:     06 44 4F 4F 54 43 50 00 00 00 00 00 00 00 00 00
+Decimal:         06 68 79 79 84 67 80 00 00 00 00 00 00 00 00 00
+ASCII:           DOOTCP
+
+Original string: E7 61 C1 3E 90 11 67 BD 39 BF 66 DB 76 B9 EB 6F
+Decrypted 7:     08 44 54 41 52 54 43 59 01 00 00 00 00 00 00 00
+Decimal:         08 68 84 65 82 84 67 89 01 00 00 00 00 00 00 00
+ASCII:           DTARTCY
+```
+
+Let's break this down...
+
+The first packet ("Decrypted 1") is what we wil call a `DOOT`.  This tells the controller that we're going to be sending a bulk data packet.  If we compare the `DOOT` from the first (short) bulk (1) and the 2nd long bulk message (5):
+
+```text
+1. 04 44 4F 4F 54 01 00 00 00 00 00 00 00 00 00 00
+5. 04 44 4F 4F 54 04 00 00 00 00 00 00 00 00 00 00
+```
+
+We see that the 6th byte probably tells us how many bulk packets there will be.  Everything else is the same
+
+After the bulk data has been sent there are two more packets, a `DOOTCP` and a `DTARTCY`.  In the short message there were two `DTARTCY` packets sent, but I think this was just a retry, so I will ignore it for now.
+
+Are there any differences in those `DOOTCP`s?  Let's look at 2 & 6:
+
+```text
+2. 06 44 4F 4F 54 43 50 00 00 00 00 00 00 00 00 00
+6. 06 44 4F 4F 54 43 50 00 00 00 00 00 00 00 00 00
+```
+
+The are the same.
+
+Let's look at the `DTARTCY` 4 & 7:
+
+```text
+08 44 54 41 52 54 43 59 01 00 00 00 00 00 00 00
+08 44 54 41 52 54 43 59 01 00 00 00 00 00 00 00
+```
+
+Also the same.
+
+### The data packets of the bulk messages
+
+These are the packets from the long message.
+
+```text
+63 00 00 01 80 00 00 02 64 00 01 96 FD FF 02 64 00 03 80 00 00 02 64 00 01 00 3B FF 02 64 00 05 80 00 00 02
+63 01 00 02 80 00 00 02 64 00 01 D1 00 FF 02 64 00 01 80 00 00 02 64 00 01 D1 00 FF 02 64 00 03 80 00 00 02
+63 02 00 02 80 00 00 02 64 00 01 00 FF C3 02 64 00 01 D1 00 FF 02 64 00 05 80 00 00 02 64 00 01 D1 00 FF 02
+24 03 00 01 D1 00 FF 02 64 00 02 80 00 00 02 64 00 01 D1 00 FF 02 64 00 06 80 00 00 02 64 00 02 4B FF 00 02
+```
+
+- The first byte is length of the rest of the packet (remember these examples are truncated)
+- The second byte is the packet sequence number starting at zero.  Our `DOOT` said there would be 4 and there are.
+- The maximum size of one message is 100 bytes including the first byte, so 99 bytes of data (0x63) of which one byte is the sequence number
+- It looks like the colour instructions are not wrapping over the long messages.  That is each long message starts with a new instruction, not the carry over from the last one.  Not sure on that yet.
+- Each colour instruction is made up of 7 bytes:
+  - 00
+  - Pixel count
+  - Red
+  - Green
+  - Blue
+  - Mode (0,1,2)
+  - Speed (0-100d)
+- Max. 98 bytes of instructions per long message divided by 7 bytes per instruction = 14 instructions per long message!  So yeah, the don't need to wrap.
+
+#### CONCLUSION
+
+On the control packets:
+
+- The `DOOT` packets are the same except for the 6th byte which says how many bulk data packets there are to follow.
+- The `DOOTCP` and `DTARTCY` packets are the same each time, so are fixed.
+
+On the long instructions message:
+
+- Max 14 instructions per long message
+- Format as described above makes sense
+
+Let's implement it!
 
 ## LED count
 
