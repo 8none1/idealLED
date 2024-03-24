@@ -723,3 +723,27 @@ btatt.value == 16 00 00 0a ff 00 00 02 64 00 0a ff ff ff 02 64 00 50 00 00 00 02
 16 00 00 0a ff 00 00 02 64 00 0a ff ff ff 02 64 00 50 00 00 00 02 64 00 00 00 00 00 00 00 00 00 00 00 00 00…
 ```
 
+## LED count
+
+Java code to set lamp count:
+
+```java
+    public static void sendLampNum(int i, int i2) {
+        byte[] int2Bytes = ByteUtils.int2Bytes(i);
+        byte[] int2Bytes2 = ByteUtils.int2Bytes(i2);
+        byte[] bArr = {9, 76, 65, 77, 80, 78, int2Bytes[0], int2Bytes[1], int2Bytes2[0], int2Bytes2[1], 0, 0, 0, 0, 0, 0};
+        LogUtil.m104d("发送设置灯数命令：" + ByteUtils.BinaryToHexString(bArr));
+        boolean writeAll = BleManager.getInstance().writeAll(Agreement.getEncryptData(bArr), DataManager.getInstance().getProductType());
+        LogUtil.m104d("发送设置设置灯数结果： ----result:" + writeAll);
+    }
+```
+
+The hex protocol looks like
+
+Decrypted:       09 4C 41 4D 50 4E 00 32  00 32  00 00 00 00 00 00 - 50 lights
+Decimal:         09 76 65 77 80 78 00 50  00 50  00 00 00 00 00 00 - 50 lights
+Decrypted:       09 4C 41 4D 50 4E 00 0A  00 0A  00 00 00 00 00 00 - 10 lights
+Decimal:         09 76 65 77 80 78 00 10  00 10  00 00 00 00 00 00 - 10 lights
+Decrypted:       09 4C 41 4D 50 4E 00 64  00 64  00 00 00 00 00 00 - 100 lights
+Decimal:         09 76 65 77 80 78 00 100 00 100 00 00 00 00 00 00 - 100 lights
+
