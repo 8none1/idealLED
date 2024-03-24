@@ -22,12 +22,32 @@ COLOUR_DATA = bytearray.fromhex("16 00 7F 00 00 7F 51 00 7F 7F 00 00 7F 00 00 00
 print (f"Length of colour data: {len(COLOUR_DATA)}")
 # Red, Orange, Yellow, Green, Blue, Red, White - or thereabouts
 
+LAMP_COUNT = 100
+
 def write_packet(packet):
     packet = encrypt_aes_ecb(packet)
     peripheral.write_request(SERVICE_UUID, WRITE_CMD_UUID, bytes(packet))
 
 def write_colour_data(packet):
     peripheral.write_request(SERVICE_UUID, WRITE_DATA_UUID, bytes(packet))
+
+
+def set_lamp_count(count):
+    """
+    09 4C 41 4D 50 4E 00 32 00 32 00 00 00 00 00 00
+    |---------------| |   | |   | |---------------|
+          header      |---| |---|       footer
+                        lamp count
+                      big endian?
+    """
+    packet = bytearray.fromhex("09 4C 41 4D 50 4E 00 32 00 32 00 00 00 00 00 00")
+    top = count >> 8
+    bottom = count & 0xFF
+    packet[6] = top
+    packet[7] = bottom
+    packet[8] = top
+    packet[9] = bottom
+    write_packet(packet)
 
 def build_colour_data_packet(colour_list):
     # Pass in a list of tuples with the 8 bit rgb colours you want
@@ -94,10 +114,14 @@ def graffiti_paint(led_num, rgb_tuple, mode=2, speed=50, brightness=100):
     write_packet(graffiti_packet)
 
 def bulk_paint():
-    command_packet = bytearray.fromhex("04 44 4F 4F 54 01 00 00 00 00 00 00 00 00 00 00")
+    command_packet = bytearray.fromhex("04 44 4F 4F 54 01 00 00 00 00 00 00 00 00 00 00") # I think the 01 is an indication is there is more data to follow.  Max payload size per message is 96 pixels
     write_packet(command_packet)
-    # Now we send the colour data
-    colour_data = build_rainbow_colour_list(20) # 20 pixels in length to start with
+    if LAMP_COUNT > 96:
+        print("Too many lamps.  Truncating to 96")
+        count = 96
+    else:
+        count = LAMP_COUNT
+    colour_data = build_rainbow_colour_list(count)
     payload = []
     payload.append(0) # Needs to be overwritten with the length of the colour data
     payload.append(0) # Might be second byte of length?  Max length of my lights is 100, so I don't know
@@ -108,14 +132,18 @@ def bulk_paint():
         payload.append(r)
         payload.append(g)
         payload.append(b)
-        payload.append(2) # Solid = 2, Fade = 1, Flash = 0
-        payload.append(50) # Speed
-    payload[0] = len(payload) - 1
+        payload.append(random.randint(0,2)) # Solid = 2, Fade = 1, Flash = 0
+        payload.append(random.randint(1,100)) # Speed
+    total_len = len(payload-1)
+    print(f"Total bulk payload length: {total_len} bytes")
+    payload[0] = (len(payload) - 1) % 256
+    payload[1] = (len(payload) - 1) // 256
+    print(f"Bulk Payload: {' '.join(f'{byte:02X}' for byte in payload)}")
     payload = bytearray(payload)
     print(f"Bulk Payload: {' '.join(f'{byte:02X}' for byte in payload)}")
     write_colour_data(bytearray(payload))
     write_packet(bytearray.fromhex("06 44 4F 4F 54 43 50 00 00 00 00 00 00 00 00 00"))
-    write_packet(bytearray.fromhex("08 44 54 41 52 54 43 59 01 00 00 00 00 00 00 00"))
+    write_packet(bytearray.fromhex("08 44 54 41 52 54 43 59 01 00 00 00 00 00 00 00")) # "I'm finished" message
 
 def decrypt_aes_ecb(ciphertext):
     cipher = AES.new(SECRET_ENCRYPTION_KEY, AES.MODE_ECB)
@@ -200,6 +228,10 @@ def response_decode(response):
     # The response is encrypted, so decrypt it
     response = decrypt_aes_ecb(response)
     print(f"Clear text response: {response.hex()}")
+    try:
+      print(f"ASCII: {response.decode('utf-8')}")
+    except:
+        pass
 
 def connect_to_device(mac_addr):
     print("Connecting to device" + mac_addr)
@@ -278,11 +310,12 @@ elif len(sys.argv) > 1 and sys.argv[1] == "--connect":
                 peripheral.notify(SERVICE_UUID, NOTIFICATION_UUID, response_decode)
                 #peripheral.notify(SERVICE_UUID, NOTIFICATION_UUID_2, response_decode)
                 get_version()
+                set_lamp_count(LAMP_COUNT)
                 print("Turning on")
                 switch_on(True)
                 time.sleep(1)
-                # print("Setting colour")
-                # set_colour(255, 0, 0)
+                print("Setting colour")
+                set_colour(255, 0, 0)
                 # time.sleep(1)
                 # set_colour(0, 255, 0)
                 # time.sleep(1)
@@ -291,9 +324,9 @@ elif len(sys.argv) > 1 and sys.argv[1] == "--connect":
                 # for n in range(2):
                 #     print(f"Setting effect {n}")
                 #     set_effect(n, colour_data=build_colour_data_packet(build_rainbow_colour_list(7)))
-                #     time.sleep(7)
-                print("Clearing effect colours")
-                set_effect(0, colour_data=build_colour_data_packet([(0, 0, 0)]))
+                #     time.sleep(5)
+                # print("Clearing effect colours")
+                # set_effect(0, colour_data=build_colour_data_packet([(0, 0, 0)]))
                 # print("Setting rainbow")
                 # for i in range(100):
                 #     graffiti_paint(i, r[i], mode=random.randint(0, 2), speed=random.randint(0, 100), brightness=50)
