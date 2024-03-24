@@ -114,36 +114,62 @@ def graffiti_paint(led_num, rgb_tuple, mode=2, speed=50, brightness=100):
     write_packet(graffiti_packet)
 
 def bulk_paint():
-    command_packet = bytearray.fromhex("04 44 4F 4F 54 01 00 00 00 00 00 00 00 00 00 00") # I think the 01 is an indication is there is more data to follow.  Max payload size per message is 96 pixels
-    write_packet(command_packet)
-    if LAMP_COUNT > 96:
-        print("Too many lamps.  Truncating to 96")
-        count = 96
-    else:
-        count = LAMP_COUNT
-    colour_data = build_rainbow_colour_list(count)
-    payload = []
-    payload.append(0) # Needs to be overwritten with the length of the colour data
-    payload.append(0) # Might be second byte of length?  Max length of my lights is 100, so I don't know
-    for each in colour_data:
-        r, g, b = each
-        payload.append(0) # Start of data
-        payload.append(1) # Number of pixels to be this colour
-        payload.append(r)
-        payload.append(g)
-        payload.append(b)
-        payload.append(random.randint(0,2)) # Solid = 2, Fade = 1, Flash = 0
-        payload.append(random.randint(1,100)) # Speed
-    total_len = len(payload-1)
-    print(f"Total bulk payload length: {total_len} bytes")
-    payload[0] = (len(payload) - 1) % 256
-    payload[1] = (len(payload) - 1) // 256
-    print(f"Bulk Payload: {' '.join(f'{byte:02X}' for byte in payload)}")
-    payload = bytearray(payload)
-    print(f"Bulk Payload: {' '.join(f'{byte:02X}' for byte in payload)}")
-    write_colour_data(bytearray(payload))
-    write_packet(bytearray.fromhex("06 44 4F 4F 54 43 50 00 00 00 00 00 00 00 00 00"))
-    write_packet(bytearray.fromhex("08 44 54 41 52 54 43 59 01 00 00 00 00 00 00 00")) # "I'm finished" message
+    """
+    You can send a bulk paint command to the controller which can set all the pixels to a desired colour
+    in a single operation, rather than sending a command for each pixel.  This is much faster.
+    However, you are limited by the number of pixels the controller can handle in a single message.
+    So you have to split them up.  A single message can handle 14 write operations.  A single write
+    operation can handle many pixels.
+
+    The format is described in more detail in the `att_protocol.md` file in this repo.
+
+    This example paints each pixel a different colour in a rainbow pattern.  In theory this is the slowest
+    operation using this method.
+    """
+    
+    command_packet = bytearray.fromhex("04 44 4F 4F 54 01 00 00 00 00 00 00 00 00 00 00") # Byte 6 says how many data packets there will be
+    pixel_list = build_rainbow_colour_list(LAMP_COUNT)
+    chunked_pixel_list = [pixel_list[i:i+14] for i in range(0, len(pixel_list), 14)] # Max. 14 commands per packet
+    colour_data_packets = []
+    pos = 0
+    for chunk in chunked_pixel_list:
+        colour_data = []
+        colour_data.append(0) # Needs to be overwritten with the length of the colour data
+        colour_data.append(pos) # Sequence number
+        pos += 1
+        for pixel in chunk:
+            print(f"Chunk: {chunk}")
+            #print(f"Pixel: {pixel}")
+
+            colour_data.append(0) # Start of data
+            colour_data.append(1) # Number of pixels to be this colour.
+            # There is an optimisation to be done here.  If the next pixel is the same colour
+            # you can change this number to be the number of pixels that are the same colour.
+            # That will shorten the message and so the time it takes to send it.  In the interests
+            # of simplicity, I'm not doing that here.  Each pixel is assumed to be a different colour.
+            r, g, b = pixel
+            colour_data.append(r >> 3) # Shifting right 3 bits to get 5 bit colour and so lower the brightness to save over loading the voltage regulator on the controller
+            colour_data.append(g >> 3)
+            colour_data.append(b >> 3)
+            colour_data.append(random.randint(0,2)) # Solid = 2, Fade = 1, Flash = 0
+            colour_data.append(random.randint(1,100)) # Speed
+        colour_data[0] = (len(colour_data) - 1)
+        colour_data_packets.append(bytearray(colour_data))
+
+    # Prepare the DOOT:
+    doot_packet = bytearray.fromhex("04 44 4F 4F 54 01 00 00 00 00 00 00 00 00 00 00")
+    doot_packet[5] = len(colour_data_packets)
+    print(f"DOOT packet: {' '.join(f'{byte:02X}' for byte in doot_packet)}")
+    for each in colour_data_packets:
+        print(f"Colour data packet: {' '.join(f'{byte:02X}' for byte in each)}")
+    dootcp_packet  = bytearray.fromhex("06 44 4F 4F 54 43 50 00 00 00 00 00 00 00 00 00")
+    dtartcy_packet = bytearray.fromhex("08 44 54 41 52 54 43 59 01 00 00 00 00 00 00 00")
+
+    write_packet(doot_packet)
+    for each in colour_data_packets:
+        write_colour_data(each)
+    write_packet(dootcp_packet)
+    write_packet(dtartcy_packet)
 
 def decrypt_aes_ecb(ciphertext):
     cipher = AES.new(SECRET_ENCRYPTION_KEY, AES.MODE_ECB)
@@ -316,28 +342,27 @@ elif len(sys.argv) > 1 and sys.argv[1] == "--connect":
                 time.sleep(1)
                 print("Setting colour")
                 set_colour(255, 0, 0)
-                # time.sleep(1)
-                # set_colour(0, 255, 0)
-                # time.sleep(1)
-                # set_colour(0, 0, 255)
-                # time.sleep(1)
-                # for n in range(2):
-                #     print(f"Setting effect {n}")
-                #     set_effect(n, colour_data=build_colour_data_packet(build_rainbow_colour_list(7)))
-                #     time.sleep(5)
-                # print("Clearing effect colours")
-                # set_effect(0, colour_data=build_colour_data_packet([(0, 0, 0)]))
-                # print("Setting rainbow")
-                # for i in range(100):
-                #     graffiti_paint(i, r[i], mode=random.randint(0, 2), speed=random.randint(0, 100), brightness=50)
-                # time.sleep(10)
+                time.sleep(1)
+                set_colour(0, 255, 0)
+                time.sleep(1)
+                set_colour(0, 0, 255)
+                time.sleep(1)
+                for n in range(2):
+                    print(f"Setting effect {n}")
+                    set_effect(n, colour_data=build_colour_data_packet(build_rainbow_colour_list(7)))
+                    time.sleep(5)
+                print("Clearing effect colours")
+                set_effect(0, colour_data=build_colour_data_packet([(0, 0, 0)]))
+                print("Setting rainbow")
+                for i in range(100):
+                    graffiti_paint(i, r[i], mode=random.randint(0, 2), speed=random.randint(0, 100), brightness=50)
+                time.sleep(10)
                 print("Bulk painting")
                 bulk_paint()
-                time.sleep(10)
+                time.sleep(20)
                 print("Turning off")
                 switch_on(False)
-                #print("Pausing for 5 seconds")
-                #time.sleep(5)
+
 
             finally:
                 peripheral.disconnect()

@@ -9,6 +9,7 @@
 - Set DIY LED patterns (not supported in Home Assistant)
 - Set brightness
 - Set effect
+- Bulk paint entire strip using collections feature
 - Automatic discovery of supported devices in Home Assistant
 
 ## Not supported
