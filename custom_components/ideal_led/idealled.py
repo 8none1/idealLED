@@ -151,11 +151,12 @@ class IDEALLEDInstance:
         self._cached_services: BleakGATTServiceCollection | None = None
         self._expected_disconnect = False
         self._is_on = None
-        self._rgb_color = (255,0,0)
-        self._brightness = 255
+        #self._rgb_color = (255,0,0)
+        self._hs_color = (0,0)
+        self._brightness_pct = 100
         self._effect = None
         self._effect_speed = 0x64
-        self._color_mode = ColorMode.RGB
+        self._color_mode = ColorMode.HS
         self._write_uuid = None
         self._write_colour_uuid = None
         self._read_uuid = None
@@ -228,12 +229,16 @@ class IDEALLEDInstance:
         return self._is_on
 
     @property
-    def brightness(self):
-        return self._brightness 
+    def brightness_pct(self):
+        return self._brightness_pct 
 
+    # @property
+    # def rgb_color(self):
+    #     return self._rgb_color
+    
     @property
-    def rgb_color(self):
-        return self._rgb_color
+    def hs_color(self):
+        return self._hs_color
 
     @property
     def effect_list(self) -> list[str]:
@@ -247,34 +252,35 @@ class IDEALLEDInstance:
     def color_mode(self):
         return self._color_mode
 
-    async def set_brightness(self, brightness: int):
+    async def set_brightness_pct(self, brightness: int):
         LOGGER.info("Brightness only: "+str(brightness))
-        if brightness == self._brightness:
+        if brightness == self._brightness_pct:
           return
         else:
-          self._brightness = brightness
+          brightness = max(0, min(100, brightness))
+          self._brightness_pct = brightness
           if self._effect is not None:
-            await self.set_effect(self._effect, self._brightness)
+            await self.set_effect(self._effect, self._brightness_pct)
           else:
-            await self.set_rgb_color(self._rgb_color, self._brightness)
+            await self.set_rgb_color(self._hs_color, self._brightness_pct)
           
     @retry_bluetooth_connection_error
-    async def set_rgb_color(self, rgb: Tuple[int, int, int], brightness: int | None = None):
-        if None in rgb:
-          rgb = self._rgb_color
-        self._rgb_color = rgb
+    async def set_rgb_color(self, hs_col: Tuple[int, int], brightness: int | None = None):
+        if None in hs_col:
+          hs_col = self._hs_color
+        rgb_color = colorsys.hsv_to_rgb(hs_col[0] / 360, hs_col[1] / 100, 1)
         self._effect = None
-        self._color_mode = ColorMode.RGB
+        self._color_mode = ColorMode.HS
         if brightness is None:
-            if self._brightness is None:
-                self._brightness = 255
+            if self._brightness_pct is None:
+                self._brightness_pct = 100
             else:
-                brightness = self._brightness
-        brightness_percent = int(brightness * 100 / 255)
+                brightness = self._brightness_pct
+        #brightness_percent = int(brightness * 100 / 255)
         # Now adjust the RBG values to match the brightness
-        red = int(rgb[0] * brightness_percent / 100)
-        green = int(rgb[1] * brightness_percent / 100)
-        blue = int(rgb[2] * brightness_percent / 100)
+        red =   int(rgb[0] * brightness / 100)
+        green = int(rgb[1] * brightness / 100)
+        blue =  int(rgb[2] * brightness / 100)
         # RGB packet
         rgb_packet = bytearray.fromhex("0F 53 47 4C 53 00 00 64 50 1F 00 00 1F 00 00 32")
         red   = int(red >> 3) # You CAN send 8 bit colours to this thing, but you probably shouldn't for power reasons.  Thanks to the good folks at Hacker News for that insight.
@@ -299,14 +305,13 @@ class IDEALLEDInstance:
         self._color_mode = None
         effect_id = EFFECT_MAP.get(effect)
         if effect_id > 11: effect = 11
-        brightness_pct = int(brightness * 100 / 255)
+        # brightness_pct = int(brightness * 100 / 255)
         packet = bytearray.fromhex("0A 4D 55 4C 54 08 00 64 50 07 32 00 00 00 00 00")
         packet[5]  = effect_id
         packet[6]  = 0 # reverse
         packet[8]  = 50 # speed
-        packet[10] = 100 # brightness_pct # 50 # saturation (brightness?)
+        packet[10] = brightness # 2024-11-16 Was: 100 # This was here before: brightness_pct # 50 # saturation (brightness?)
         await self._write(packet)
-        # Now we send the colour data
         await self.write_colour_data()
     
     @retry_bluetooth_connection_error
@@ -315,7 +320,7 @@ class IDEALLEDInstance:
         # In the app you can edit this yourself, but HA doesn't have the UI for such a thing
         # so for now I'm just going to hardcode it to a rainbow pattern.  You could change this to
         # whatever you want, but for an effect the maximum length is 7 colours.
-        brightness_pct = int(self._brightness * 100 / 255)
+        brightness_pct = self._brightness_pct
         colour_list = []
         colour_divisions = int(360 / 7)
         for i in range(7):

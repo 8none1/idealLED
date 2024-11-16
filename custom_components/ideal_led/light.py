@@ -10,8 +10,9 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.components.light import (
     PLATFORM_SCHEMA,
-    ATTR_BRIGHTNESS,
-    ATTR_RGB_COLOR,
+    ATTR_BRIGHTNESS_PCT,
+    # ATTR_RGB_COLOR,
+    ATTR_HS_COLOR,
     ATTR_EFFECT,
     ColorMode,
     LightEntity,
@@ -39,8 +40,8 @@ class IDEALLEDLight(LightEntity):
     ) -> None:
         self._instance = idealledinstance
         self._entry_id = entry_id
-        self._attr_supported_color_modes = {ColorMode.RGB}
-        self._attr_supported_features = LightEntityFeature.EFFECT | LightEntityFeature.FLASH
+        self._attr_supported_color_modes = {ColorMode.HS}
+        self._attr_supported_features = LightEntityFeature.EFFECT
         self._attr_brightness_step_pct = 10
         self._attr_name = name
         self._attr_unique_id = self._instance.mac
@@ -51,7 +52,7 @@ class IDEALLEDLight(LightEntity):
         return self._instance.is_on != None
 
     @property
-    def brightness(self):
+    def brightness_pct(self):
         return self._instance.brightness
     
     @property
@@ -84,7 +85,11 @@ class IDEALLEDLight(LightEntity):
     def rgb_color(self):
         """Return the hs color value."""
         return self._instance.rgb_color
-
+    @property
+    def hs_color(self):
+        """Return the hs color value."""
+        return self._instance.hs_color
+    
     @property
     def color_mode(self):
         """Return the color mode of the light."""
@@ -111,20 +116,26 @@ class IDEALLEDLight(LightEntity):
         if not self.is_on:
             await self._instance.turn_on()
                 
-        if ATTR_BRIGHTNESS in kwargs and len(kwargs) == 1:
+        if ATTR_BRIGHTNESS_PCT in kwargs and len(kwargs) == 1:
             # Only brightness changed
-            await self._instance.set_brightness(kwargs[ATTR_BRIGHTNESS])
+            await self._instance.set_brightness_pct(kwargs[ATTR_BRIGHTNESS_PCT])
                
-        if ATTR_RGB_COLOR in kwargs:
-            if kwargs[ATTR_RGB_COLOR] != self.rgb_color:
-                self._effect = None
-                bri = kwargs[ATTR_BRIGHTNESS] if ATTR_BRIGHTNESS in kwargs else self._instance._brightness
-                await self._instance.set_rgb_color(kwargs[ATTR_RGB_COLOR], bri)
+        # if ATTR_RGB_COLOR in kwargs:
+        #     if kwargs[ATTR_RGB_COLOR] != self.rgb_color:
+        #         self._effect = None
+        #         bri = kwargs[ATTR_BRIGHTNESS] if ATTR_BRIGHTNESS in kwargs else self._instance._brightness_pct
+        #         await self._instance.set_rgb_color(kwargs[ATTR_RGB_COLOR], bri)
         
+        if ATTR_HS_COLOR in kwargs:
+            if kwargs[ATTR_HS_COLOR] != self.hs_color:
+                self._effect = None
+                bri = kwargs[ATTR_BRIGHTNESS_PCT] if ATTR_BRIGHTNESS_PCT in kwargs else self._instance._brightness_pct
+                await self._instance.set_rgb_color(kwargs[ATTR_HS_COLOR], bri)
+
         if ATTR_EFFECT in kwargs:
             if kwargs[ATTR_EFFECT] != self.effect:
                 self._effect = kwargs[ATTR_EFFECT]
-                bri = kwargs[ATTR_BRIGHTNESS] if ATTR_BRIGHTNESS in kwargs else self._instance._brightness
+                bri = kwargs[ATTR_BRIGHTNESS_PCT] if ATTR_BRIGHTNESS_PCT in kwargs else self._instance._brightness_pct
                 await self._instance.set_effect(kwargs[ATTR_EFFECT], bri)
         self.async_write_ha_state()
 
