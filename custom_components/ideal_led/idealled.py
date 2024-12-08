@@ -314,7 +314,7 @@ class IDEALLEDInstance:
             LOGGER.error("Effect %s not supported", effect)
             return
         self._effect = effect
-        self._color_mode = ColorMode.BRIGHTNESS
+        self._color_mode = ColorMode.UNKNOWN
         effect_id = EFFECT_MAP.get(effect)
         if effect_id > 11: effect = 11
         brightness_pct = int(brightness /255 * 100)
