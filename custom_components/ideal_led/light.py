@@ -38,7 +38,7 @@ class IDEALLEDLight(LightEntity):
     ) -> None:
         self._instance = idealledinstance
         self._entry_id = entry_id
-        self._attr_supported_color_modes = {ColorMode.HS}
+        self._attr_supported_color_modes = {ColorMode.HS, ColorMode.BRIGHTNESS}
         self._attr_supported_features = LightEntityFeature.EFFECT
         #self._attr_brightness_step_pct = 10
         self._attr_name = name
