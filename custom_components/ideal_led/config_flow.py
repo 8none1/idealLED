@@ -25,6 +25,19 @@ DATA_SCHEMA = vol.Schema({("host"): str})
 class DeviceData(BluetoothData):
     def __init__(self, discovery_info) -> None:
         self._discovery = discovery_info
+        manu_data = next(iter(self._discovery.manufacturer_data.values()), None)
+        # LOGGER.debug(f"Manu data keys: {self._discovery.manufacturer_data.keys()}")
+        # LOGGER.debug(f"Manufacturer Data: {manu_data}")
+        if discovery_info.name.lower().startswith("isp-"):
+            try:
+                if manu_data:
+                    LOGGER.debug(f"DeviceData: {discovery_info}")
+                    LOGGER.debug(f"Name: {discovery_info.name}")
+                    LOGGER.debug(f"Manufacturer Data: {manu_data}")
+                    LOGGER.debug(f"Manufacturer Data (hex): {[f'0x{byte:02x}' for byte in manu_data]}")
+            except:
+                raise Exception("Error parsing manufacturer data")
+        
         LOGGER.debug("Discovered bluetooth devices, DeviceData, : %s , %s", self._discovery.address, self._discovery.name)
 
     def supported(self):
@@ -46,7 +59,7 @@ class DeviceData(BluetoothData):
         """Update from BLE advertisement data."""
         LOGGER.debug("Parsing BLE advertisement data: %s", service_info)
         
-class BJLEDFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
+class iDealLedFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
     CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_POLL
 

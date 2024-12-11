@@ -294,16 +294,17 @@ class IDEALLEDInstance:
         blue =  int(rgb_color[2] * brightness / 255)
         LOGGER.debug("RGB colour adjusted for brightness: %s", (red, green, blue))
         # RGB packet
-        rgb_packet = bytearray.fromhex("0F 53 47 4C 53 00 00 64 50 1F 00 00 1F 00 00 32")
+        # rgb_packet = bytearray.fromhex("0F 53 47 4C 53 00 00 64 50 1F 00 00 1F 00 00 32")
+        rgb_packet = bytearray.fromhex("07 43 4F 4C 4F 00 FF 00 00 00 00 00 00 00 00 00")
         red   = int(red >> 3) # You CAN send 8 bit colours to this thing, but you probably shouldn't for power reasons.  Thanks to the good folks at Hacker News for that insight.
         green = int(green >> 3)
         blue  = int(blue >> 3)
-        rgb_packet[9] = red
-        rgb_packet[12] = red
-        rgb_packet[10] = green
-        rgb_packet[13] = green
-        rgb_packet[11] = blue
-        rgb_packet[14] = blue
+        rgb_packet[6] = red
+        # rgb_packet[12] = red
+        rgb_packet[5] = green
+        # rgb_packet[13] = green
+        rgb_packet[7] = blue
+        # rgb_packet[14] = blue
         await self._write(rgb_packet)
 
 
@@ -318,53 +319,63 @@ class IDEALLEDInstance:
         effect_id = EFFECT_MAP.get(effect)
         if effect_id > 11: effect = 11
         brightness_pct = int(brightness /255 * 100)
-        packet = bytearray.fromhex("0A 4D 55 4C 54 08 00 64 50 07 32 00 00 00 00 00")
-        packet[5]  = effect_id
-        packet[6]  = 0 # reverse
-        packet[8]  = 50 # speed
-        packet[10] = brightness_pct # 2024-11-16 Was: 100 # This was here before: brightness_pct # 50 # saturation (brightness?)
+        # packet = bytearray.fromhex("0A 4D 55 4C 54 08 00 64 50 07 32 00 00 00 00 00")
+        packet = bytearray.fromhex("06 4C 49 47 48 54 0C 00 00 00 00 00 00 00 00 00")
+        # packet[5]  = effect_id
+        # packet[6]  = 0 # reverse
+        # packet[8]  = 50 # speed
+        # packet[10] = brightness_pct # 2024-11-16 Was: 100 # This was here before: brightness_pct # 50 # saturation (brightness?)
         await self._write(packet)
-        await self.write_colour_data()
+        await self.write_colour_data(effect_id)
     
     @retry_bluetooth_connection_error
-    async def write_colour_data(self):
+    async def write_colour_data(self, effect_id: int):
         # This is sent after switching to an effect to tell the device what sort of pattern to show.
         # In the app you can edit this yourself, but HA doesn't have the UI for such a thing
         # so for now I'm just going to hardcode it to a rainbow pattern.  You could change this to
         # whatever you want, but for an effect the maximum length is 7 colours.
-        brightness_pct = (self._brightness / 255) * 100
-        colour_list = []
-        colour_divisions = int(360 / 7)
-        for i in range(7):
-            h = i * colour_divisions
-            r, g, b = colorsys.hsv_to_rgb(h / 360, 1, brightness_pct / 100.0)
-            r = int(r * 255)
-            g = int(g * 255)
-            b = int(b * 255)
-            colour_list.append((r, g, b))
-        #print(f"Colour list: {colour_list}")
-        length = len(colour_list)
-        colour_data = []
-        colour_data.append(length*3) # 3 bytes per colour
-        colour_data.append(0) # Don't know what this is, perhaps just a separator
-        for colour in colour_list:
-            colour_data.append(colour[0])
-            colour_data.append(colour[1])
-            colour_data.append(colour[2])
-        await self._write_colour_data(colour_data)
+        # brightness_pct = (self._brightness / 255) * 100
+        # colour_list = []
+        # colour_divisions = int(360 / 7)
+        # for i in range(7):
+        #     h = i * colour_divisions
+        #     r, g, b = colorsys.hsv_to_rgb(h / 360, 1, brightness_pct / 100.0)
+        #     r = int(r * 255)
+        #     g = int(g * 255)
+        #     b = int(b * 255)
+        #     colour_list.append((r, g, b))
+        # #print(f"Colour list: {colour_list}")
+        # length = len(colour_list)
+        # colour_data = []
+        # colour_data.append(length*3) # 3 bytes per colour
+        # colour_data.append(0) # Don't know what this is, perhaps just a separator
+        # for colour in colour_list:
+        #     colour_data.append(colour[0])
+        #     colour_data.append(colour[1])
+        #     colour_data.append(colour[2])
+        packet1 = bytearray.fromhex("0E 45 46 46 01 07 03 FF 00 00 FF 80 00 FF FF 00")
+        packet2 = bytearray.fromhex("0E 45 46 46 01 07 13 00 FF 00 00 FF FF 00 00 FF")
+        packet3 = bytearray.fromhex("0E 45 46 46 01 07 21 80 00 FF 00 00 00 00 00 00")
+        packet1[4] = effect_id
+        packet2[4] = effect_id
+        packet3[4] = effect_id
+        await self._write_colour_data(packet1)
+        await self._write_colour_data(packet2)
+        await self._write_colour_data(packet3)
+        # await self._write_colour_data(colour_data)
 
 
     @retry_bluetooth_connection_error
     async def turn_on(self):
-        packet = bytearray.fromhex("05 54 55 52 4E 01 00 00 00 00 00 00 00 00 00 00")
-        packet[5] = 1
+        # packet = bytearray.fromhex("05 54 55 52 4E 01 00 00 00 00 00 00 00 00 00 00")
+        packet = bytearray.fromhex("06 4C 45 44 4F 4E 00 00 00 00 00 00 00 00 00 00")
         await self._write(packet)
         self._is_on = True
 
     @retry_bluetooth_connection_error
     async def turn_off(self):
-        packet = bytearray.fromhex("05 54 55 52 4E 01 00 00 00 00 00 00 00 00 00 00")
-        packet[5] = 0
+        # packet = bytearray.fromhex("05 54 55 52 4E 01 00 00 00 00 00 00 00 00 00 00")
+        packet = bytearray.fromhex("06 4C 45 44 4F 46 46 00 00 00 00 00 00 00 00 00")
         await self._write(packet)
         self._is_on = False
 
