@@ -359,9 +359,9 @@ class IDEALLEDInstance:
         packet1[4] = effect_id
         packet2[4] = effect_id
         packet3[4] = effect_id
-        await self._write_colour_data(packet1)
-        await self._write_colour_data(packet2)
-        await self._write_colour_data(packet3)
+        await self._write(packet1)
+        await self._write(packet2)
+        await self._write(packet3)
         # await self._write_colour_data(colour_data)
 
 
