@@ -28,7 +28,7 @@ class DeviceData(BluetoothData):
         manu_data = next(iter(self._discovery.manufacturer_data.values()), None)
         # LOGGER.debug(f"Manu data keys: {self._discovery.manufacturer_data.keys()}")
         # LOGGER.debug(f"Manufacturer Data: {manu_data}")
-        if discovery_info.name.lower().startswith("isp-"):
+        if discovery_info.name.lower().startswith("isp-") or discovery_info.name.lower().startswith("idl-"):
             try:
                 if manu_data:
                     LOGGER.debug(f"DeviceData: {discovery_info}")
@@ -41,7 +41,7 @@ class DeviceData(BluetoothData):
         LOGGER.debug("Discovered bluetooth devices, DeviceData, : %s , %s", self._discovery.address, self._discovery.name)
 
     def supported(self):
-        return self._discovery.name.lower().startswith("isp-")
+        return self._discovery.name.lower().startswith("isp-") or self._discovery.name.lower().startswith("idl-")
 
     def address(self):
         return self._discovery.address
