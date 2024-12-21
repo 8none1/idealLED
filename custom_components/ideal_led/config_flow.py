@@ -16,7 +16,7 @@ from homeassistant.components.bluetooth import (
 from bluetooth_sensor_state_data import BluetoothData
 from home_assistant_bluetooth import BluetoothServiceInfo
 
-from .const import DOMAIN, CONF_RESET, CONF_DELAY
+from .const import DOMAIN, CONF_DELAY
 import logging
 
 LOGGER = logging.getLogger(__name__)
@@ -172,7 +172,7 @@ class BJLEDFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def toggle_light(self):
         if not self._instance:
-            self._instance = IDEALLEDInstance(self.mac, False, 120, self.hass)
+            self._instance = IDEALLEDInstance(self.mac, 10, self.hass)
         try:
             await self._instance.update()
             await self._instance.turn_on()
@@ -196,7 +196,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
     def __init__(self, config_entry):
         """Initialize options flow."""
-        self.config_entry = config_entry
+        self._config_entry = config_entry
+        LOGGER.debug(f"OptionsFlowHandler config entry: {self._config_entry}")
 
     async def async_step_init(self, _user_input=None):
         """Manage the options."""
@@ -205,9 +206,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     async def async_step_user(self, user_input=None):
         """Handle a flow initialized by the user."""
         errors = {}
-        options = self.config_entry.options or {CONF_RESET: False,CONF_DELAY: 120}
+        LOGGER.debug(f"OptionsFlowHandler: {self._config_entry.options}")
+        options = self._config_entry.options or {CONF_DELAY: 120}
         if user_input is not None:
-            return self.async_create_entry(title="", data={CONF_RESET: user_input[CONF_RESET], CONF_DELAY: user_input[CONF_DELAY]})
+            return self.async_create_entry(title="", data={CONF_DELAY: user_input[CONF_DELAY]})
 
         return self.async_show_form(
             step_id="user",
