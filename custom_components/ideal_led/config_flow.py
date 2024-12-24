@@ -71,6 +71,7 @@ class iDealLedFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self._discovery_info: BluetoothServiceInfoBleak | None = None
         self._discovered_device: DeviceData | None = None
         self._discovered_devices = []
+        self.firmware_version = None
 
     async def async_step_bluetooth(
         self, discovery_info: BluetoothServiceInfoBleak
@@ -145,7 +146,7 @@ class iDealLedFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             if "flicker" in user_input:
                 if user_input["flicker"]:
-                    return self.async_create_entry(title=self.name, data={CONF_MAC: self.mac, "name": self.name})
+                    return self.async_create_entry(title=self.name, data={CONF_MAC: self.mac, "name": self.name, "fw_version": self.firmware_version.decode('utf-8', errors='ignore')})
                 return self.async_abort(reason="cannot_validate")
             
             if "retry" in user_input and not user_input["retry"]:
@@ -185,7 +186,7 @@ class iDealLedFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def toggle_light(self):
         if not self._instance:
-            self._instance = IDEALLEDInstance(self.mac, 10, self.hass)
+            self._instance = IDEALLEDInstance(self.mac, 10, None, self.hass)
         try:
             await self._instance.update()
             await self._instance.turn_on()
@@ -195,6 +196,7 @@ class iDealLedFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             await self._instance.turn_on()
             await asyncio.sleep(1)
             await self._instance.turn_off()
+            self.firmware_version = await self._instance._read_descr()
         except (Exception) as error:
             return error
         finally:

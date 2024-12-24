@@ -57,6 +57,8 @@ NAME_ARRAY = ["ISP-", "IDL-"]
 WRITE_CMD_CHARACTERISTIC_UUIDS = ["d44bc439-abfd-45a2-b575-925416129600"]
 WRITE_COL_CHARACTERISTIC_UUIDS = ["d44bc439-abfd-45a2-b575-92541612960a"]
 NOTIFY_CHARACTERISTIC_UUIDS = ["d44bc439-abfd-45a2-b575-925416129601"]
+DESCRIPTOR_UUIDS = ["00002901-0000-1000-8000-00805f9b34fb"]
+
 SECRET_ENCRYPTION_KEY = bytes(
     [
         0x34,
@@ -156,7 +158,7 @@ def retry_bluetooth_connection_error(func: WrapFuncType) -> WrapFuncType:
 
 
 class IDEALLEDInstance:
-    def __init__(self, address,delay: int, hass) -> None:
+    def __init__(self, address,delay: int, fw_version: str, hass) -> None:
         self.loop = asyncio.get_running_loop()
         self._mac = address
         self._delay = delay
@@ -186,6 +188,7 @@ class IDEALLEDInstance:
         self._turn_off_cmd = None
         self._model = self._detect_model()
         self._on_update_callbacks = []
+        self._firmware_version = fw_version
 
         LOGGER.debug(
             f"Model information for device {self._device.name} : ModelNo {self._model}. MAC: {self._mac}. Delay: {self._delay}"
@@ -200,6 +203,13 @@ class IDEALLEDInstance:
                 return x
             x = x + 1
 
+    async def _read_descr(self):
+        """Read the descriptor of the device."""
+        await self._ensure_connected()
+        descr = await self._client.read_gatt_descriptor(7)
+        LOGGER.debug(f"Descriptor: {descr}")
+        return descr
+    
     async def _write(self, data: bytearray):
         """Send command to device and read response."""
         await self._ensure_connected()
@@ -248,6 +258,10 @@ class IDEALLEDInstance:
     def name(self):
         return self._device.name
 
+    @property
+    def firmware_version(self):
+        return self._firmware_version
+    
     @property
     def rssi(self):
         return self._device.rssi
@@ -480,6 +494,7 @@ class IDEALLEDInstance:
                     "%s: Write colour UUID: %s", self.name, self._write_colour_uuid
                 )
                 break
+
         return bool(self._read_uuid and self._write_uuid and self._write_colour_uuid)
 
     def _reset_disconnect_timer(self) -> None:

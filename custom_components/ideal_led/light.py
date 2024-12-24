@@ -99,6 +99,10 @@ class IDEALLEDLight(LightEntity):
         return self._instance._color_mode
 
     @property
+    def firmware_version(self):
+        return self._instance.firmware_version
+    
+    @property
     def device_info(self):
         """Return device info."""
         return DeviceInfo(
@@ -108,6 +112,8 @@ class IDEALLEDLight(LightEntity):
             },
             name=self.name,
             connections={(device_registry.CONNECTION_NETWORK_MAC, self._instance.mac)},
+            model=self._instance._model,
+            sw_version=self.firmware_version
         )
 
     @property

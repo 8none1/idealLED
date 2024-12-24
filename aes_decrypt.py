@@ -26,8 +26,11 @@ def main(hex_string):
 
     print(f"Original string: {ori_hex_string}")
     print(f"Decrypted:       {clear_hex_string}")
-    print(f"Decimal:        {' '.join(f'{byte:02d}' for byte in decrypted_text)}")
-    print(f"ASCII:          {decrypted_text.decode('utf-8')}")
+#    print(f"Decimal:        {' '.join(f'{byte:02d}' for byte in decrypted_text)}")
+    try:
+        print(f"ASCII:          {decrypted_text.decode('utf-8')}")
+    except UnicodeDecodeError:
+        print(f"ASCII:          {decrypted_text.decode('utf-8', errors='ignore')}")
     #print(f"Re-encrypted:    {reecrypted_hex_string}")
     #print()
 
@@ -46,8 +49,9 @@ if __name__ == "__main__":
         lines = f.readlines()
         for line in lines:
             hex_string = bytearray.fromhex(line)
-            try:
-                main(hex_string)
-            except:
-                print(' '.join(f'{byte:02X}' for byte in hex_string))
-                continue
+            main(hex_string)
+            # try:
+            #     main(hex_string)
+            # except:
+            #     print(' '.join(f'{byte:02X}' for byte in hex_string))
+            #     continue
