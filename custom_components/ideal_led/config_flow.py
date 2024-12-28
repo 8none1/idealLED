@@ -189,15 +189,18 @@ class iDealLedFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             self._instance = IDEALLEDInstance(self.mac, 10, None, self.hass)
         try:
             await self._instance.update()
-            await self._instance.turn_on()
-            await asyncio.sleep(1)
-            await self._instance.turn_off()
-            await asyncio.sleep(1)
-            await self._instance.turn_on()
-            await asyncio.sleep(1)
-            await self._instance.turn_off()
             self.firmware_version = await self._instance._read_descr()
+            self._instance._firmware_version = self.firmware_version
+            self._instance._detect_model()
+            await self._instance.turn_on()
+            await asyncio.sleep(1)
+            await self._instance.turn_off()
+            await asyncio.sleep(1)
+            await self._instance.turn_on()
+            await asyncio.sleep(1)
+            await self._instance.turn_off()
         except (Exception) as error:
+            raise error
             return error
         finally:
             await self._instance.stop()
