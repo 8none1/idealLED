@@ -146,7 +146,7 @@ class iDealLedFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             if "flicker" in user_input:
                 if user_input["flicker"]:
-                    return self.async_create_entry(title=self.name, data={CONF_MAC: self.mac, "name": self.name, "fw_version": self.firmware_version.decode('utf-8', errors='ignore')})
+                    return self.async_create_entry(title=self.name, data={CONF_MAC: self.mac, "name": self.name, "fw_version": self.firmware_version.decode('utf-8', errors='ignore').strip('\x00')})
                 return self.async_abort(reason="cannot_validate")
             
             if "retry" in user_input and not user_input["retry"]:

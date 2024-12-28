@@ -30,6 +30,6 @@ COMMAND_BYTES = {
 }
 
 COMMAND_LOOKUP = {
-    "TYPE1" : ['TR24'],
-    "TYPE2" : ['TR21', 'TR23']
+    "TYPE1" : ['R002-15', 'R004-01'],
+    "TYPE2" : ['R012-01']
 }
