@@ -25,10 +25,23 @@ DATA_SCHEMA = vol.Schema({("host"): str})
 class DeviceData(BluetoothData):
     def __init__(self, discovery_info) -> None:
         self._discovery = discovery_info
+        manu_data = next(iter(self._discovery.manufacturer_data.values()), None)
+        # LOGGER.debug(f"Manu data keys: {self._discovery.manufacturer_data.keys()}")
+        # LOGGER.debug(f"Manufacturer Data: {manu_data}")
+        if discovery_info.name.lower().startswith("isp-") or discovery_info.name.lower().startswith("idl-"):
+            try:
+                if manu_data:
+                    LOGGER.debug(f"DeviceData: {discovery_info}")
+                    LOGGER.debug(f"Name: {discovery_info.name}")
+                    LOGGER.debug(f"Manufacturer Data: {manu_data}")
+                    LOGGER.debug(f"Manufacturer Data (hex): {[f'0x{byte:02x}' for byte in manu_data]}")
+            except:
+                raise Exception("Error parsing manufacturer data")
+        
         LOGGER.debug("Discovered bluetooth devices, DeviceData, : %s , %s", self._discovery.address, self._discovery.name)
 
     def supported(self):
-        return self._discovery.name.lower().startswith("isp-")
+        return self._discovery.name.lower().startswith("isp-") or self._discovery.name.lower().startswith("idl-")
 
     def address(self):
         return self._discovery.address
@@ -46,7 +59,7 @@ class DeviceData(BluetoothData):
         """Update from BLE advertisement data."""
         LOGGER.debug("Parsing BLE advertisement data: %s", service_info)
         
-class BJLEDFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
+class iDealLedFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
     CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_POLL
 
@@ -58,6 +71,7 @@ class BJLEDFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self._discovery_info: BluetoothServiceInfoBleak | None = None
         self._discovered_device: DeviceData | None = None
         self._discovered_devices = []
+        self.firmware_version = None
 
     async def async_step_bluetooth(
         self, discovery_info: BluetoothServiceInfoBleak
@@ -132,7 +146,7 @@ class BJLEDFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             if "flicker" in user_input:
                 if user_input["flicker"]:
-                    return self.async_create_entry(title=self.name, data={CONF_MAC: self.mac, "name": self.name})
+                    return self.async_create_entry(title=self.name, data={CONF_MAC: self.mac, "name": self.name, "fw_version": self.firmware_version.decode('utf-8', errors='ignore').strip('\x00')})
                 return self.async_abort(reason="cannot_validate")
             
             if "retry" in user_input and not user_input["retry"]:
@@ -172,9 +186,12 @@ class BJLEDFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def toggle_light(self):
         if not self._instance:
-            self._instance = IDEALLEDInstance(self.mac, 10, self.hass)
+            self._instance = IDEALLEDInstance(self.mac, 10, None, self.hass)
         try:
             await self._instance.update()
+            self.firmware_version = await self._instance._read_descr()
+            self._instance._firmware_version = self.firmware_version
+            self._instance._detect_model()
             await self._instance.turn_on()
             await asyncio.sleep(1)
             await self._instance.turn_off()
@@ -183,6 +200,7 @@ class BJLEDFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             await asyncio.sleep(1)
             await self._instance.turn_off()
         except (Exception) as error:
+            raise error
             return error
         finally:
             await self._instance.stop()

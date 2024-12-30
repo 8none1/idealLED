@@ -21,42 +21,47 @@ from collections.abc import Callable
 import traceback
 import logging
 import colorsys
-
-# Add effects information in a separate file because there is a LOT of boilerplate.
+from .const import COMMAND_BYTES, COMMAND_LOOKUP
 
 LOGGER = logging.getLogger(__name__)
 
-EFFECT_01 = "Effect 01"
-EFFECT_02 = "Effect 02"
-EFFECT_03 = "Effect 03"
-EFFECT_04 = "Effect 04"
-EFFECT_05 = "Effect 05"
-EFFECT_06 = "Effect 06"
-EFFECT_07 = "Effect 07"
-EFFECT_08 = "Effect 08"
-EFFECT_09 = "Effect 09"
-EFFECT_10 = "Effect 10"
+# EFFECT_01 = "Effect 01"
+# EFFECT_02 = "Effect 02"
+# EFFECT_03 = "Effect 03"
+# EFFECT_04 = "Effect 04"
+# EFFECT_05 = "Effect 05"
+# EFFECT_06 = "Effect 06"
+# EFFECT_07 = "Effect 07"
+# EFFECT_08 = "Effect 08"
+# EFFECT_09 = "Effect 09"
+# EFFECT_10 = "Effect 10"
 
-EFFECT_MAP = {
-    EFFECT_01: 1,
-    EFFECT_02: 2,
-    EFFECT_03: 3,
-    EFFECT_04: 4,
-    EFFECT_05: 5,
-    EFFECT_06: 6,
-    EFFECT_07: 7,
-    EFFECT_08: 8,
-    EFFECT_09: 9,
-    EFFECT_10: 10,
-}
+# EFFECT_MAP = {
+#     EFFECT_01: 1,
+#     EFFECT_02: 2,
+#     EFFECT_03: 3,
+#     EFFECT_04: 4,
+#     EFFECT_05: 5,
+#     EFFECT_06: 6,
+#     EFFECT_07: 7,
+#     EFFECT_08: 8,
+#     EFFECT_09: 9,
+#     EFFECT_10: 10,
+# }
+
+EFFECT_MAP = {}
+for i in range(1, 11):
+    EFFECT_MAP[f"Effect {i:02d}"] = i
 
 EFFECT_LIST = sorted(EFFECT_MAP)
 EFFECT_ID_NAME = {v: k for k, v in EFFECT_MAP.items()}
 
-NAME_ARRAY = ["ISP-"]
+NAME_ARRAY = ["ISP-", "IDL-"]
 WRITE_CMD_CHARACTERISTIC_UUIDS = ["d44bc439-abfd-45a2-b575-925416129600"]
 WRITE_COL_CHARACTERISTIC_UUIDS = ["d44bc439-abfd-45a2-b575-92541612960a"]
-NOTIFY_CHARACTERISTIC_UUIDS = ["d44bc439-abfd-45a2-b575-925416129601"]
+NOTIFY_CHARACTERISTIC_UUIDS    = ["d44bc439-abfd-45a2-b575-925416129601"]
+DESCRIPTOR_UUIDS               = ["00002901-0000-1000-8000-00805f9b34fb"]
+
 SECRET_ENCRYPTION_KEY = bytes(
     [
         0x34,
@@ -156,7 +161,7 @@ def retry_bluetooth_connection_error(func: WrapFuncType) -> WrapFuncType:
 
 
 class IDEALLEDInstance:
-    def __init__(self, address,delay: int, hass) -> None:
+    def __init__(self, address,delay: int, fw_version: str, hass) -> None:
         self.loop = asyncio.get_running_loop()
         self._mac = address
         self._delay = delay
@@ -184,6 +189,8 @@ class IDEALLEDInstance:
         self._read_uuid = None
         self._turn_on_cmd = None
         self._turn_off_cmd = None
+        self._command_type = None
+        self._firmware_version = fw_version
         self._model = self._detect_model()
         self._on_update_callbacks = []
 
@@ -192,14 +199,39 @@ class IDEALLEDInstance:
         )
 
     def _detect_model(self):
-        x = 0
-        for name in NAME_ARRAY:
-            if self._device.name.lower().startswith(
-                name.lower()
-            ):  # TODO: match on BLE provided model instead of name
-                return x
-            x = x + 1
+        LOGGER.debug("Trying to detect model")
+        LOGGER.debug(f"FW version: {self._firmware_version}")
+        if self._firmware_version is None:
+            return None
+        if isinstance(self._firmware_version, bytearray):
+            self._firmware_version = self._firmware_version.decode('utf-8').strip('\x00')
+        model = self._firmware_version
+        first_r_index = model.find('R')
+        second_r_index = model.find('R', first_r_index + 1)
+        model = model[second_r_index:] if second_r_index != -1 else None
+        LOGGER.debug(f"Model: {model}")
+        if model is None:
+            LOGGER.error(f"Could not detect model from firmware version: {self._firmware_version}")
+            return None
+        LOGGER.debug(f"{COMMAND_LOOKUP.items()}")
+        self._command_type = next((k for k, v in COMMAND_LOOKUP.items() if model in v), None)
+        # for k, v in COMMAND_LOOKUP.items():
+        #     LOGGER.debug(f"K: {k}, V: {v}")
+        #     if model in v:
+        #         self._command_type = k
+        #         break
+        # else:
+        #     self._command_type = None
+        LOGGER.debug(f"Command type: {self._command_type}")
+        return model
 
+    async def _read_descr(self):
+        """Read the descriptor of the device."""
+        await self._ensure_connected()
+        descr = await self._client.read_gatt_descriptor(7)
+        LOGGER.debug(f"Descriptor: {descr}")
+        return descr
+    
     async def _write(self, data: bytearray):
         """Send command to device and read response."""
         await self._ensure_connected()
@@ -248,6 +280,10 @@ class IDEALLEDInstance:
     def name(self):
         return self._device.name
 
+    @property
+    def firmware_version(self):
+        return self._firmware_version
+    
     @property
     def rssi(self):
         return self._device.rssi
@@ -325,21 +361,19 @@ class IDEALLEDInstance:
         green = int(rgb_color[1] * brightness / 255)
         blue = int(rgb_color[2] * brightness / 255)
         LOGGER.debug("RGB colour adjusted for brightness: %s", (red, green, blue))
-        # RGB packet
-        rgb_packet = bytearray.fromhex(
-            "0F 53 47 4C 53 00 00 64 50 1F 00 00 1F 00 00 32"
-        )
-        red = int(
-            red >> 3
-        )  # You CAN send 8 bit colours to this thing, but you probably shouldn't for power reasons.  Thanks to the good folks at Hacker News for that insight.
+        red   = int(red   >> 3) # You CAN send 8 bit colours to this thing, but you probably shouldn't for power reasons.  Thanks to the good folks at Hacker News for that insight.
         green = int(green >> 3)
-        blue = int(blue >> 3)
-        rgb_packet[9] = red
-        rgb_packet[12] = red
-        rgb_packet[10] = green
-        rgb_packet[13] = green
-        rgb_packet[11] = blue
-        rgb_packet[14] = blue
+        blue  = int(blue  >> 3)
+
+        rgb_packet = COMMAND_BYTES[self._command_type]["rgb_bytes"]
+        rgb_packet[COMMAND_BYTES[self._command_type]["red_offset"]]   = red
+        rgb_packet[COMMAND_BYTES[self._command_type]["green_offset"]] = green
+        rgb_packet[COMMAND_BYTES[self._command_type]["blue_offset"]]  = blue
+
+        # Background colours for type 2 - do we need them?
+        # rgb_packet[12] = red
+        # rgb_packet[13] = green
+        # rgb_packet[14] = blue
         await self._write(rgb_packet)
 
     @retry_bluetooth_connection_error
@@ -351,21 +385,37 @@ class IDEALLEDInstance:
         self._effect = effect
         self._color_mode = ColorMode.BRIGHTNESS
         effect_id = EFFECT_MAP.get(effect)
-        if effect_id > 11:
-            effect = 11
-        brightness_pct = int(brightness / 255 * 100)
-        packet = bytearray.fromhex("0A 4D 55 4C 54 08 00 64 50 07 32 00 00 00 00 00")
-        packet[5] = effect_id
-        packet[6] = 0  # reverse
-        packet[8] = 50  # speed
-        packet[10] = (
-            brightness_pct  # 2024-11-16 Was: 100 # This was here before: brightness_pct # 50 # saturation (brightness?)
-        )
-        await self._write(packet)
-        await self.write_colour_data()
+        if effect_id > 11: effect = 11
+        brightness_pct = int(brightness /255 * 100)
+        # packet = bytearray.fromhex("0A 4D 55 4C 54 08 00 64 50 07 32 00 00 00 00 00")
+        # packet = bytearray.fromhex("06 4C 49 47 48 54 0C 00 00 00 00 00 00 00 00 00")
+        packet = COMMAND_BYTES[self._command_type]["effects_bytes"]
+        if self._command_type == "TYPE1":
+            await self._write(packet)
+            await self.write_colour_data_type1(effect_id)
 
+        elif self._command_type == "TYPE2":
+            packet[COMMAND_BYTES[self._command_type]["effect_offset"]]  = effect_id
+            packet[6]  = 0 # reverse
+            packet[8]  = 50 # speed
+            packet[10] = brightness_pct # 2024-11-16 Was: 100 # This was here before: brightness_pct # 50 # saturation (brightness?)
+            await self._write(packet)
+            await self.write_colour_data_type2()
+        
     @retry_bluetooth_connection_error
-    async def write_colour_data(self):
+    async def write_colour_data_type1(self, effect_id: int):
+        packet1 = bytearray.fromhex("0E 45 46 46 01 07 03 FF 00 00 FF 80 00 FF FF 00")
+        packet2 = bytearray.fromhex("0E 45 46 46 01 07 13 00 FF 00 00 FF FF 00 00 FF")
+        packet3 = bytearray.fromhex("0E 45 46 46 01 07 21 80 00 FF 00 00 00 00 00 00")
+        packet1[4] = effect_id
+        packet2[4] = effect_id
+        packet3[4] = effect_id
+        await self._write(packet1)
+        await self._write(packet2)
+        await self._write(packet3)
+    
+    @retry_bluetooth_connection_error
+    async def write_colour_data_type2(self):
         # This is sent after switching to an effect to tell the device what sort of pattern to show.
         # In the app you can edit this yourself, but HA doesn't have the UI for such a thing
         # so for now I'm just going to hardcode it to a rainbow pattern.  You could change this to
@@ -380,34 +430,72 @@ class IDEALLEDInstance:
             g = int(g * 255)
             b = int(b * 255)
             colour_list.append((r, g, b))
-        # print(f"Colour list: {colour_list}")
+        #print(f"Colour list: {colour_list}")
         length = len(colour_list)
         colour_data = []
-        colour_data.append(length * 3)  # 3 bytes per colour
-        colour_data.append(0)  # Don't know what this is, perhaps just a separator
+        colour_data.append(length*3) # 3 bytes per colour
+        colour_data.append(0) # Don't know what this is, perhaps just a separator
         for colour in colour_list:
             colour_data.append(colour[0])
             colour_data.append(colour[1])
             colour_data.append(colour[2])
         await self._write_colour_data(colour_data)
+    
+    @retry_bluetooth_connection_error
+    async def write_colour_data(self, effect_id: int):
+        # This is sent after switching to an effect to tell the device what sort of pattern to show.
+        # In the app you can edit this yourself, but HA doesn't have the UI for such a thing
+        # so for now I'm just going to hardcode it to a rainbow pattern.  You could change this to
+        # whatever you want, but for an effect the maximum length is 7 colours.
+        # brightness_pct = (self._brightness / 255) * 100
+        # colour_list = []
+        # colour_divisions = int(360 / 7)
+        # for i in range(7):
+        #     h = i * colour_divisions
+        #     r, g, b = colorsys.hsv_to_rgb(h / 360, 1, brightness_pct / 100.0)
+        #     r = int(r * 255)
+        #     g = int(g * 255)
+        #     b = int(b * 255)
+        #     colour_list.append((r, g, b))
+        # #print(f"Colour list: {colour_list}")
+        # length = len(colour_list)
+        # colour_data = []
+        # colour_data.append(length*3) # 3 bytes per colour
+        # colour_data.append(0) # Don't know what this is, perhaps just a separator
+        # for colour in colour_list:
+        #     colour_data.append(colour[0])
+        #     colour_data.append(colour[1])
+        #     colour_data.append(colour[2])
+        packet1 = bytearray.fromhex("0E 45 46 46 01 07 03 FF 00 00 FF 80 00 FF FF 00")
+        packet2 = bytearray.fromhex("0E 45 46 46 01 07 13 00 FF 00 00 FF FF 00 00 FF")
+        packet3 = bytearray.fromhex("0E 45 46 46 01 07 21 80 00 FF 00 00 00 00 00 00")
+        packet1[4] = effect_id
+        packet2[4] = effect_id
+        packet3[4] = effect_id
+        await self._write(packet1)
+        await self._write(packet2)
+        await self._write(packet3)
+        # await self._write_colour_data(colour_data)
 
     @retry_bluetooth_connection_error
     async def turn_on(self):
-        packet = bytearray.fromhex("05 54 55 52 4E 01 00 00 00 00 00 00 00 00 00 00")
-        packet[5] = 1
+        # packet = bytearray.fromhex("05 54 55 52 4E 01 00 00 00 00 00 00 00 00 00 00")
+        # packet = bytearray.fromhex("06 4C 45 44 4F 4E 00 00 00 00 00 00 00 00 00 00")
+        packet = COMMAND_BYTES[self._command_type]["turn_on_bytes"]
         await self._write(packet)
         self._is_on = True
 
     @retry_bluetooth_connection_error
     async def turn_off(self):
-        packet = bytearray.fromhex("05 54 55 52 4E 01 00 00 00 00 00 00 00 00 00 00")
-        packet[5] = 0
+        # packet = bytearray.fromhex("05 54 55 52 4E 01 00 00 00 00 00 00 00 00 00 00")
+        # packet = bytearray.fromhex("06 4C 45 44 4F 46 46 00 00 00 00 00 00 00 00 00")
+        packet = COMMAND_BYTES[self._command_type]["turn_off_bytes"]
         await self._write(packet)
         self._is_on = False
 
     @retry_bluetooth_connection_error
     async def update(self):
-        LOGGER.debug("%s: Update in lwdnetwf called", self.name)
+        LOGGER.debug("%s: Update in ideal led called", self.name)
         try:
             await self._ensure_connected()
             self._is_on = False
@@ -476,6 +564,7 @@ class IDEALLEDInstance:
                     "%s: Write colour UUID: %s", self.name, self._write_colour_uuid
                 )
                 break
+
         return bool(self._read_uuid and self._write_uuid and self._write_colour_uuid)
 
     def _reset_disconnect_timer(self) -> None:

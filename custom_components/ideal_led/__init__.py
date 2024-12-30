@@ -16,9 +16,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     LOGGER.debug(f"Config data: {entry.data}")
     LOGGER.debug(f"Config options: {entry.options}")
     delay = entry.options.get(CONF_DELAY, None) or entry.data.get(CONF_DELAY, 60)
+    fw_version = entry.data.get("fw_version", "0.0.1")
     LOGGER.debug(f"Config: delay data: {delay}")
 
-    instance = IDEALLEDInstance(entry.data[CONF_MAC], delay, hass)
+    instance = IDEALLEDInstance(entry.data[CONF_MAC], delay, fw_version, hass)
     #hass.data.setdefault(DOMAIN, {})[entry.entry_id] = instance
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = instance
