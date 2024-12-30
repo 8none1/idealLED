@@ -189,7 +189,7 @@ class IDEALLEDInstance:
         self._read_uuid = None
         self._turn_on_cmd = None
         self._turn_off_cmd = None
-        self._command_type = None
+        self._command_type = "TYPE2"
         self._firmware_version = fw_version
         self._model = self._detect_model()
         self._on_update_callbacks = []
