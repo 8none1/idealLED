@@ -212,18 +212,13 @@ class IDEALLEDInstance:
         LOGGER.debug(f"Model: {model}")
         if model is None:
             LOGGER.error(f"Could not detect model from firmware version: {self._firmware_version}.  Defaulting to a TYPE2 device")
+            self._command_type = "TYPE2"
             return "R012-01"
-        LOGGER.debug(f"{COMMAND_LOOKUP.items()}")
-        self._command_type = next((k for k, v in COMMAND_LOOKUP.items() if model in v), "TYPE2")
-        # for k, v in COMMAND_LOOKUP.items():
-        #     LOGGER.debug(f"K: {k}, V: {v}")
-        #     if model in v:
-        #         self._command_type = k
-        #         break
-        # else:
-        #     self._command_type = None
-        LOGGER.debug(f"Command type: {self._command_type}")
-        return model
+        else:
+            LOGGER.debug(f"{COMMAND_LOOKUP.items()}")
+            self._command_type = next((k for k, v in COMMAND_LOOKUP.items() if model in v), "TYPE2")
+            LOGGER.debug(f"Command type: {self._command_type}")
+            return model
 
     async def _read_descr(self):
         """Read the descriptor of the device."""
