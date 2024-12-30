@@ -365,19 +365,14 @@ class IDEALLEDInstance:
         green = int(green >> 3)
         blue  = int(blue  >> 3)
 
-        # RGB packet
-        # rgb_packet = bytearray.fromhex("0F 53 47 4C 53 00 00 64 50 1F 00 00 1F 00 00 32")
-        # rgb_packet = bytearray.fromhex("07 43 4F 4C 4F 00 FF 00 00 00 00 00 00 00 00 00")
         rgb_packet = COMMAND_BYTES[self._command_type]["rgb_bytes"]
         rgb_packet[COMMAND_BYTES[self._command_type]["red_offset"]]   = red
         rgb_packet[COMMAND_BYTES[self._command_type]["green_offset"]] = green
         rgb_packet[COMMAND_BYTES[self._command_type]["blue_offset"]]  = blue
 
-        # rgb_packet[6] = red
+        # Background colours for type 2 - do we need them?
         # rgb_packet[12] = red
-        # rgb_packet[5] = green
         # rgb_packet[13] = green
-        # rgb_packet[7] = blue
         # rgb_packet[14] = blue
         await self._write(rgb_packet)
 
@@ -400,7 +395,7 @@ class IDEALLEDInstance:
             await self.write_colour_data_type1(effect_id)
 
         elif self._command_type == "TYPE2":
-            packet[5]  = effect_id
+            packet[COMMAND_BYTES[self._command_type]["effect_offset"]]  = effect_id
             packet[6]  = 0 # reverse
             packet[8]  = 50 # speed
             packet[10] = brightness_pct # 2024-11-16 Was: 100 # This was here before: brightness_pct # 50 # saturation (brightness?)

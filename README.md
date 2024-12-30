@@ -2,6 +2,10 @@
 
 ![image](https://github.com/8none1/idealLED/assets/6552931/c5fcd8fc-440a-48dd-abe4-d6fdd2e4a422)
 
+## Supported Models
+
+Devices are coming on to the market which report as IDL or ISP lights but which use a different protocol.  Support for these lights can be added by a sample of the lights will be needed OR the gathering of `btsnoop` debug logs from an Android device.  If you are willing to help gather the data and test the new code, please log an issue.
+
 ## Supported Features
 
 - On / Off
@@ -14,7 +18,7 @@
 
 ## Not supported
 
-- Discovery of current light state (no notifications from device)
+- Discovery of current light state
 - On-chip timer functionality
 
 ## Home Assistant
@@ -40,6 +44,10 @@ There are a few other tools in this repo that might help you improve support or 
 - The btsnoop directory has a few HCI log dumps if you want to look at the raw values
 - `aes_decrypt.py` was used to test the encryption implementation
 - `att_protocol.md` has notes on the protocol and the Android companion app
+
+## An important note on upgrades
+
+As bugs are fixed and new features are added it might be necessary to delete your existing devices and re-add them.  If you experience strange behaviour after an upgrade please try to delete the device and re-add it.  If this doesn't help, open an issue describing the problem.
 
 ## Warning
 
