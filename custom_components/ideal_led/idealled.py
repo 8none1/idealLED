@@ -211,10 +211,10 @@ class IDEALLEDInstance:
         model = model[second_r_index:] if second_r_index != -1 else None
         LOGGER.debug(f"Model: {model}")
         if model is None:
-            LOGGER.error(f"Could not detect model from firmware version: {self._firmware_version}")
-            return None
+            LOGGER.error(f"Could not detect model from firmware version: {self._firmware_version}.  Defaulting to a TYPE2 device")
+            return "R012-01"
         LOGGER.debug(f"{COMMAND_LOOKUP.items()}")
-        self._command_type = next((k for k, v in COMMAND_LOOKUP.items() if model in v), None)
+        self._command_type = next((k for k, v in COMMAND_LOOKUP.items() if model in v), "TYPE2")
         # for k, v in COMMAND_LOOKUP.items():
         #     LOGGER.debug(f"K: {k}, V: {v}")
         #     if model in v:
