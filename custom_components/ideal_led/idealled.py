@@ -182,7 +182,7 @@ class IDEALLEDInstance:
         self._hs_color = (0, 0)
         self._brightness = 255
         self._effect = None
-        self._effect_speed = 0x64
+        self._effect_speed = 50
         self._color_mode = ColorMode.HS
         self._write_uuid = None
         self._write_colour_uuid = None
@@ -392,7 +392,7 @@ class IDEALLEDInstance:
         elif self._command_type == "TYPE2":
             packet[COMMAND_BYTES[self._command_type]["effect_offset"]]  = effect_id
             packet[6]  = 0 # reverse
-            packet[8]  = 50 # speed
+            packet[8]  = self._effect_speed # speed (1-100)
             packet[10] = brightness_pct # 2024-11-16 Was: 100 # This was here before: brightness_pct # 50 # saturation (brightness?)
             await self._write(packet)
             await self.write_colour_data_type2()
@@ -617,3 +617,16 @@ class IDEALLEDInstance:
         # Placeholder to be replaced by a call from light.py
         # I can't work out how to plumb a callback from here to light.py
         return
+
+    def speed_local_callback(self):
+        # Placeholder to be replaced by a call from number.py
+        return
+
+    async def set_effect_speed(self, speed: int):
+        """Set the effect speed (1-100)."""
+        speed = max(1, min(100, speed))
+        self._effect_speed = speed
+        LOGGER.debug(f"Effect speed set to {speed}")
+        # If an effect is currently active, reapply it with the new speed
+        if self._effect is not None:
+            await self.set_effect(self._effect, self._brightness)

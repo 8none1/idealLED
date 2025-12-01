@@ -121,8 +121,8 @@ class iDealLedFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             if self.mac in current_addresses:
                 LOGGER.debug("Device %s in current_addresses", (self.mac))
                 continue
-            if (device for device in self._discovered_devices if device.address == self.mac) == ([]):
-                LOGGER.debug("Device %s in discovered_devices", (device))
+            if any(device.address() == self.mac for device in self._discovered_devices):
+                LOGGER.debug("Device %s already in discovered_devices", self.mac)
                 continue
             device = DeviceData(discovery_info)
             if device.supported():
