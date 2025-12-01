@@ -12,7 +12,7 @@ Devices are coming on to the market which report as IDL or ISP lights but which 
 - Set RGB colour of entire strip
 - Set DIY LED patterns (not supported in Home Assistant)
 - Set brightness
-- Set effect
+- Set effect & effect speed
 - Bulk paint entire strip using collections feature
 - Automatic discovery of supported devices in Home Assistant
 
