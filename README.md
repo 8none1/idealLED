@@ -58,6 +58,111 @@ You can read more on this here: https://www.whizzy.org/2023-12-14-bricked-xmas/
 
 As far as I can tell this integration does not use any unsafe values by default.  If you know otherwise, please open an issue, ideally with an accompanying PR.
 
+## Enabling Debug Logging
+
+If you're experiencing issues with the integration or want to help troubleshoot problems, you can enable debug logging for this integration in Home Assistant.
+
+### Method 1: Using configuration.yaml (Persistent)
+
+Add the following to your `configuration.yaml` file:
+
+```yaml
+logger:
+  default: info
+  logs:
+    custom_components.ideal_led: debug
+```
+
+After adding this configuration, restart Home Assistant for the changes to take effect.
+
+### Method 2: Using the Home Assistant UI (Temporary)
+
+For temporary debugging without restarting Home Assistant:
+
+1. Go to **Settings** → **Devices & Services**
+2. Find the **iDeal LED** integration
+3. Click the three-dot menu (⋮) on the integration card
+4. Select **Enable debug logging**
+
+This will immediately start capturing debug logs. When you're done debugging:
+
+1. Return to the integration
+2. Click the three-dot menu (⋮) again
+3. Select **Disable debug logging**
+
+A download will be offered containing the captured debug logs.
+
+### Method 3: Using Developer Tools (Temporary)
+
+1. Go to **Developer Tools** → **Services**
+2. Search for and select `logger.set_level`
+3. Enter the following in the YAML editor:
+
+```yaml
+service: logger.set_level
+data:
+  custom_components.ideal_led: debug
+```
+
+4. Click **Call Service**
+
+This enables debug logging immediately without a restart. The setting will revert to default after Home Assistant restarts.
+
+### Viewing the Logs
+
+You can view the logs in several ways:
+
+#### Via Home Assistant UI
+
+1. Go to **Settings** → **System** → **Logs**
+2. Click **Load Full Logs** to see all entries
+3. Use the search/filter to look for `ideal_led` entries
+
+#### Via Command Line (Docker)
+
+```bash
+docker logs -f homeassistant 2>&1 | grep ideal_led
+```
+
+#### Via Command Line (Home Assistant OS / Supervised)
+
+```bash
+ha core logs --follow | grep ideal_led
+```
+
+#### Via Command Line (Core Installation)
+
+Check your Home Assistant log file location (typically `home-assistant.log` in your config directory):
+
+```bash
+tail -f /path/to/config/home-assistant.log | grep ideal_led
+```
+
+### What to Include in Bug Reports
+
+When opening an issue, please include:
+
+1. **Debug logs** - Enable debug logging, reproduce the issue, then capture the relevant log entries
+2. **Device information** - The model/type of your LED device (visible in the device info)
+3. **Home Assistant version** - Found in Settings → About
+4. **Integration version** - Found in HACS or the manifest.json
+5. **Steps to reproduce** - What actions led to the problem
+
+### Bluetooth Debugging
+
+For Bluetooth-specific issues, you may also want to enable debug logging for the Bluetooth integration:
+
+```yaml
+logger:
+  default: info
+  logs:
+    custom_components.ideal_led: debug
+    homeassistant.components.bluetooth: debug
+    bleak: debug
+```
+
+> **Note:** Enabling `bleak` debug logging can produce a large volume of logs. Only enable it when specifically troubleshooting Bluetooth connectivity issues.
+
 ## Other projects that might be of interest
 
 - [iDotMatrix](https://github.com/8none1/idotmatrix)
