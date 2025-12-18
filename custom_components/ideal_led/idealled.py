@@ -161,16 +161,19 @@ def retry_bluetooth_connection_error(func: WrapFuncType) -> WrapFuncType:
 
 
 class IDEALLEDInstance:
-    def __init__(self, address,delay: int, fw_version: str, hass) -> None:
+    def __init__(self, address, delay: int, fw_version: str, hass) -> None:
         self.loop = asyncio.get_running_loop()
         self._mac = address
         self._delay = delay
         self._hass = hass
         self._device: BLEDevice | None = None
         self._device = bluetooth.async_ble_device_from_address(self._hass, address)
+        # Don't fail if device isn't found at startup - Bluetooth may not be ready yet.
+        # We'll try to get the device again when a connection is needed.
         if not self._device:
-            raise ConfigEntryNotReady(
-                f"You need to add bluetooth integration (https://www.home-assistant.io/integrations/bluetooth) or couldn't find a nearby device with address: {address}"
+            LOGGER.warning(
+                "Bluetooth device %s not found at startup, will retry on first command",
+                address
             )
         self._connect_lock: asyncio.Lock = asyncio.Lock()
         self._client: BleakClientWithServiceCache | None = None
@@ -195,7 +198,7 @@ class IDEALLEDInstance:
         self._on_update_callbacks = []
 
         LOGGER.debug(
-            f"Model information for device {self._device.name} : ModelNo {self._model}. MAC: {self._mac}. Delay: {self._delay}"
+            f"Model information for device {self.name} : ModelNo {self._model}. MAC: {self._mac}. Delay: {self._delay}"
         )
 
     def _detect_model(self):
@@ -265,7 +268,7 @@ class IDEALLEDInstance:
 
     @property
     def mac(self):
-        return self._device.address
+        return self._mac
 
     # @property
     # def reset(self):
@@ -273,7 +276,9 @@ class IDEALLEDInstance:
 
     @property
     def name(self):
-        return self._device.name
+        if self._device:
+            return self._device.name
+        return f"IDL-{self._mac[-8:].replace(':', '')}"
 
     @property
     def firmware_version(self):
@@ -281,7 +286,9 @@ class IDEALLEDInstance:
     
     @property
     def rssi(self):
-        return self._device.rssi
+        if self._device:
+            return self._device.rssi
+        return None
 
     @property
     def is_on(self):
@@ -516,6 +523,13 @@ class IDEALLEDInstance:
             if self._client and self._client.is_connected:
                 self._reset_disconnect_timer()
                 return
+            # If device wasn't available at startup, try to get it now
+            if not self._device:
+                self._device = bluetooth.async_ble_device_from_address(self._hass, self._mac)
+                if not self._device:
+                    raise Exception(
+                        f"Bluetooth device {self._mac} not found. Ensure the device is powered on and in range."
+                    )
             LOGGER.debug("%s: Connecting", self.name)
             client = await establish_connection(
                 BleakClientWithServiceCache,
