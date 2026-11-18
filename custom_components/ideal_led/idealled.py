@@ -576,6 +576,9 @@ class IDEALLEDInstance:
             self._notification_callback = self._notification_handler
             await client.start_notify(self._read_uuid, self._notification_callback)
             LOGGER.debug("%s: Subscribed to notifications", self.name)
+            # About a second after a new connection the controller re-applies its own last state, which
+            # undoes a command written straight after connecting (an off came back on). Write after that.
+            await asyncio.sleep(2)
 
     def _resolve_characteristics(self, services: BleakGATTServiceCollection) -> bool:
         """Resolve characteristics."""
