@@ -4,7 +4,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, Event
 from homeassistant.const import CONF_MAC, EVENT_HOMEASSISTANT_STOP
 
-from .const import DOMAIN, CONF_DELAY
+from .const import DOMAIN, CONF_DELAY, CONF_SETTLE, DEFAULT_SETTLE
 from .idealled import IDEALLEDInstance
 import logging
 
@@ -16,10 +16,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     LOGGER.debug(f"Config data: {entry.data}")
     LOGGER.debug(f"Config options: {entry.options}")
     delay = entry.options.get(CONF_DELAY, None) or entry.data.get(CONF_DELAY, 60)
+    settle = entry.options.get(CONF_SETTLE, DEFAULT_SETTLE)
     fw_version = entry.data.get("fw_version", "0.0.1")
     LOGGER.debug(f"Config: delay data: {delay}")
 
-    instance = IDEALLEDInstance(entry.data[CONF_MAC], delay, fw_version, hass)
+    instance = IDEALLEDInstance(entry.data[CONF_MAC], delay, fw_version, hass, settle)
     #hass.data.setdefault(DOMAIN, {})[entry.entry_id] = instance
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = instance
