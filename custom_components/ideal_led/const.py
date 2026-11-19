@@ -3,6 +3,8 @@ from enum import Enum
 DOMAIN = "ideal_led"
 CONF_RESET = "reset"
 CONF_DELAY = "delay"
+CONF_SETTLE = "settle"
+DEFAULT_SETTLE = 3  # seconds to wait after connecting before the first write
 
 COMMAND_BYTES = {
     "TYPE1" : {

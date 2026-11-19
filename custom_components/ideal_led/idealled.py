@@ -173,10 +173,11 @@ def retry_bluetooth_connection_error(func: WrapFuncType) -> WrapFuncType:
 
 
 class IDEALLEDInstance:
-    def __init__(self, address, delay: int, fw_version: str, hass) -> None:
+    def __init__(self, address, delay: int, fw_version: str, hass, settle: float = 3) -> None:
         self.loop = asyncio.get_running_loop()
         self._mac = address
         self._delay = delay
+        self._settle = settle
         self._hass = hass
         self._device: BLEDevice | None = None
         self._device = bluetooth.async_ble_device_from_address(self._hass, address)
@@ -576,9 +577,10 @@ class IDEALLEDInstance:
             self._notification_callback = self._notification_handler
             await client.start_notify(self._read_uuid, self._notification_callback)
             LOGGER.debug("%s: Subscribed to notifications", self.name)
-            # About a second after a new connection the controller re-applies its own last state, which
+            # About 1.5-2 s after a new connection the controller re-applies its own last state, which
             # undoes a command written straight after connecting (an off came back on). Write after that.
-            await asyncio.sleep(2)
+            if self._settle:
+                await asyncio.sleep(self._settle)
 
     def _resolve_characteristics(self, services: BleakGATTServiceCollection) -> bool:
         """Resolve characteristics."""
