@@ -224,7 +224,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         """Handle a flow initialized by the user."""
         errors = {}
         LOGGER.debug(f"OptionsFlowHandler: {self._config_entry.options}")
-        options = self._config_entry.options or {CONF_DELAY: 120}
+        options = self._config_entry.options or {CONF_DELAY: 60}
         if user_input is not None:
             return self.async_create_entry(title="", data={
                 CONF_DELAY: user_input[CONF_DELAY],
@@ -235,7 +235,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             step_id="user",
             data_schema=vol.Schema(
                 {
-                    vol.Optional(CONF_DELAY, default=options.get(CONF_DELAY, 120)): int,
+                    vol.Optional(CONF_DELAY, default=options.get(CONF_DELAY, 60)): int,
                     vol.Optional(CONF_SETTLE, default=options.get(CONF_SETTLE, DEFAULT_SETTLE)): vol.All(
                         vol.Coerce(float), vol.Range(min=0, max=10)
                     ),
