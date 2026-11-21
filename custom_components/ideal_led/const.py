@@ -5,6 +5,8 @@ CONF_RESET = "reset"
 CONF_DELAY = "delay"
 CONF_SETTLE = "settle"
 DEFAULT_SETTLE = 3  # seconds to wait after connecting before the first write
+CONF_GAMMA = "gamma"
+DEFAULT_GAMMA = 1.0  # 1.0 = no correction (send the plain HS->RGB value)
 
 COMMAND_BYTES = {
     "TYPE1" : {

@@ -37,7 +37,8 @@
                 "data": {
                     "reset": "Reset color when led turn on",
                     "delay": "Disconnect delay (0 equal never disconnect)",
-                    "settle": "Settle time after connecting, in seconds (raise this if the light turns itself back on after an off)"
+                    "settle": "Settle time after connecting, in seconds (raise this if the light turns itself back on after an off)",
+                    "gamma": "Colour gamma correction, 1 to 3 (1 = off; try 2.2 if mixed colours such as purple look wrong)"
                 }
             }
         }

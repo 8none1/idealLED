@@ -173,11 +173,12 @@ def retry_bluetooth_connection_error(func: WrapFuncType) -> WrapFuncType:
 
 
 class IDEALLEDInstance:
-    def __init__(self, address, delay: int, fw_version: str, hass, settle: float = 3) -> None:
+    def __init__(self, address, delay: int, fw_version: str, hass, settle: float = 3, gamma: float = 1.0) -> None:
         self.loop = asyncio.get_running_loop()
         self._mac = address
         self._delay = delay
         self._settle = settle
+        self._gamma = gamma
         self._hass = hass
         self._device: BLEDevice | None = None
         self._device = bluetooth.async_ble_device_from_address(self._hass, address)
@@ -367,8 +368,11 @@ class IDEALLEDInstance:
 
         LOGGER.debug("HS colour requested: %s", hs_col)
         rgb_color = colorsys.hsv_to_rgb(hs_col[0] / 360, hs_col[1] / 100, 1)
-        rgb_color = [round(x * 255) for x in rgb_color]
-        LOGGER.debug("Calculated RGB colour: %s", rgb_color)
+        # Optional gamma correction on the hue/saturation colour (before brightness
+        # scaling) so mixed colours such as purple look right on strips that otherwise
+        # wash out towards blue. gamma 1.0 leaves the values untouched.
+        rgb_color = [round(255 * (x ** self._gamma)) for x in rgb_color]
+        LOGGER.debug("Calculated RGB colour (gamma %s): %s", self._gamma, rgb_color)
         self._effect = None
         self._color_mode = ColorMode.HS
         if brightness is None:
