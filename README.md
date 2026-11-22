@@ -37,6 +37,14 @@ Add this repo to HACS as a custom repo. Click through:
 - Restart Home Assistant
 - iDeal LED devices should start to appear in your Integrations page
 
+### Options
+
+Open Settings -> Devices & Services -> iDeal LED -> Configure to change:
+
+- **Disconnect delay**: seconds of inactivity before the integration drops the Bluetooth connection. `0` means never disconnect.
+- **Settle time**: seconds to wait after connecting before the first command (0 to 10, default 3). Raise this if the light turns itself back on after being switched off.
+- **Colour gamma**: gamma correction for colours, 1 to 3 (default 1, which is off). Try `2.2` if mixed colours look wrong, for example purple looking light blue. It only changes the colour balance, not the brightness.
+
 ## Other tools
 
 There are a few other tools in this repo that might help you improve support or test your own lights.
