@@ -6,6 +6,12 @@
 
 Devices are coming on to the market which report as IDL or ISP lights but which use a different protocol.  Support for these lights can be added by a sample of the lights will be needed OR the gathering of `btsnoop` debug logs from an Android device.  If you are willing to help gather the data and test the new code, please log an issue.
 
+### Firmware versions and command types
+
+The integration reads a firmware string from the controller (for example `TR2407R004-01`) and uses it to pick the command set (TYPE1 or TYPE2).  The model part of the string (here `R004-01`) is not always enough on its own, because different manufacturing batches can report the same model but speak a different protocol.  For example, `TR2407R004-01` (2024) uses TYPE1 but `TR2503R004-01` (2025) uses TYPE2.
+
+Some controllers (for example some `IDL-` and `ISP-` lights) do not expose the firmware string at the usual location.  The integration looks for it in a few places and, if it cannot find it, falls back to TYPE2.  If your light does not respond to commands, enable debug logging (see below) and check the `Command type` line.  If it looks wrong, please log an issue with the firmware string from the logs.
+
 ## Supported Features
 
 - On / Off
