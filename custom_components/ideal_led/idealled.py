@@ -251,12 +251,44 @@ class IDEALLEDInstance:
             return model
 
     async def _read_descr(self):
-        """Read the descriptor of the device."""
+        """Read the firmware version descriptor of the device.
+
+        Handle 7 is known to hold the firmware string on older controllers, so
+        try that first to keep their behaviour unchanged.  Handles are assigned
+        by the device firmware though, so for others (e.g. IDL-xxxxxx and
+        ISP-xxxxxx, issue #42) fall back to looking for a Characteristic User
+        Description (0x2901) descriptor on the characteristics we use.  If
+        nothing can be read, return an unknown version so setup can complete
+        (the model then defaults to TYPE2).
+        """
         await self._ensure_connected()
-        descr = await self._client.read_gatt_descriptor(7)
-        LOGGER.debug(f"Descriptor: {descr}")
-        return descr
-    
+        try:
+            descr = await self._client.read_gatt_descriptor(7)
+            LOGGER.debug(f"Descriptor (handle 7): {descr}")
+            return descr
+        except Exception as ex:
+            LOGGER.debug(f"{self.name}: no descriptor at handle 7: {ex}")
+
+        chars = (self._read_uuid, self._write_uuid, self._write_colour_uuid)
+        for char in chars:
+            for desc in getattr(char, "descriptors", None) or []:
+                if desc.uuid.lower() not in DESCRIPTOR_UUIDS:
+                    continue
+                try:
+                    descr = await self._client.read_gatt_descriptor(desc.handle)
+                except Exception as ex:
+                    LOGGER.debug(f"{self.name}: could not read descriptor {desc.handle}: {ex}")
+                    continue
+                if descr:
+                    LOGGER.debug(f"Descriptor (handle {desc.handle}, {desc.uuid}): {descr}")
+                    return descr
+
+        LOGGER.warning(
+            f"Could not read firmware version from {self.name}. "
+            "Defaulting to unknown firmware"
+        )
+        return bytearray(b"unknown")
+
     async def _write(self, data: bytearray):
         """Send command to device and read response."""
         await self._ensure_connected()
