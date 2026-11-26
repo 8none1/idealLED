@@ -51,6 +51,18 @@ Open Settings -> Devices & Services -> iDeal LED -> Configure to change:
 - **Settle time**: seconds to wait after connecting before the first command (0 to 10, default 3). Raise this if the light turns itself back on after being switched off.
 - **Colour gamma**: gamma correction for colours, 1 to 3 (default 1, which is off). Try `2.2` if mixed colours look wrong, for example purple looking light blue. It only changes the colour balance, not the brightness.
 
+### Colours look off?
+
+If primary colours (red, green, blue) look right but mixed colours don't, for example purple coming out light blue, turn on gamma correction:
+
+1. Go to Settings -> Devices & Services -> iDeal LED -> Configure.
+2. Set **Colour gamma** to `2.2` and submit. The integration reloads, so there's no need to restart Home Assistant.
+3. Pick the colour again and check it.
+
+Why this helps: LED brightness rises roughly in a straight line with the value sent, but our eyes don't see it that way, so the weaker channels in a mixed colour look much brighter than they should and the colour drifts. A gamma curve compensates for that. `2.2` is the usual value (it is what the sRGB standard approximates). If things are still slightly off you can try values between about `1.8` and `2.8`.
+
+Gamma correction is off by default so existing setups don't change colour after an upgrade. The setting is per device, so you can set it differently for each strip. See [issue #31](https://github.com/8none1/idealLED/issues/31) for the original report.
+
 ## Other tools
 
 There are a few other tools in this repo that might help you improve support or test your own lights.
